@@ -61,3 +61,50 @@ This table outlines the values assigned to different poker hands and additional 
 ## How to Use
 
 - **Example:** For a Pair of 4s, refer to the "Pair" row and find the corresponding example and points.
+
+## Smart Contracts
+
+**Requirements**
+1. Chainlink Automation
+2. Random Numbers (VRF)
+3. Wallet Integration
+
+## Expedition-contract Functions
+
+### 1. `Create-Game`
+
+#### Arguments
+
+- `numOfRounds`: uint8 
+- `BetValue`: uint256
+- `numOfPlayers`: uint8
+
+### 2. `Enter-Game`
+### 3. `Roll-Dice`
+### 4. `saveSelectedDice`
+### 5. `rerollSelecedDice`
+### 6. `getScoreCard`
+### 7. `endGame`
+### 7. `declareWinnerSendReward`
+### 8. `getTheGameCode`
+### 9. `getCurrentPlayerDiceCombos`
+### 10. ``
+
+## Seige-mode-contract Functions
+
+### 1. `Create-Game`
+
+#### Args
+- `bootcampBetValue`: uint32
+- `ManuverBetValue`: uint32
+- `conquestBetValue`: uint32
+- `numOfPlayer`: uint8
+
+### 2. `Enter-Game`
+### 8. `startLevelWithBets`
+### 3. `Roll-Dice`
+### 4. `saveSelectedDice`
+### 5. `rerollSelecedDice`
+### 6. `getScoreCard`
+### 7. `declareLevelWinnerSendReward`
+### 9. `ExitGame`
