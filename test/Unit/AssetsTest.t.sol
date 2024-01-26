@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import {Assets} from "../../src/Assets.sol";
 import {Test,console} from "forge-std/Test.sol";
+import {DeployAssets} from "../../script/Deployments/DeployAssets.s.sol";
 
 contract AssetsTest is Test {
     uint8 public constant VELAR_ID = 0;
@@ -33,16 +34,8 @@ contract AssetsTest is Test {
     Assets assets;
     address USER = address(0x1);
     function setUp() public{
-        assets = new Assets(
-            "Imperial_Apex",
-            "Citadel",
-            "Grandeur",
-            "Fortress",
-            "Castle",
-            "Stronghold",
-            "Bastion"
-        );
-
+        DeployAssets deployer = new DeployAssets();
+        assets = deployer.run();
     }
 
     function testURIs() public {
