@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {Assets} from "../src/Assets.sol";
+import {Assets} from "../../src/Assets.sol";
 import {Test,console} from "forge-std/Test.sol";
 
 contract AssetsTest is Test {

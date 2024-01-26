@@ -64,11 +64,11 @@ contract Assets is ERC1155URIStorage, ERC1155Holder {
         costs[NEXOS_ID] = NEXOS_COST;
     }
 
-    function fundVelar() public {
+    function fundVelar() external {
         _mint(msg.sender, VELAR_ID, 100, "");
     }
 
-    function mintTokens( uint8 _tokenID,uint _amount) public{
+    function mintTokens( uint8 _tokenID,uint _amount) external{
         if(balanceOf(msg.sender, VELAR_ID)  < _amount * costs[_tokenID]) {
             revert Assets_NotEnoughTokens(_tokenID);
         }
@@ -76,10 +76,14 @@ contract Assets is ERC1155URIStorage, ERC1155Holder {
         _mint(msg.sender, _tokenID, _amount, "");
     }
 
-    function sendTokens(address _to, uint _amount, uint8 _tokenId) public{
+    function sendTokens(address _to, uint _amount, uint8 _tokenId) external{
         _safeTransferFrom(msg.sender, _to, _tokenId, _amount, "");
     }
 
+    function getBalance(address _address, uint8 _tokenID) external view returns(uint){
+        return balanceOf(_address, _tokenID);
+    }
+    
     function supportsInterface(bytes4 interfaceId)
         public
         view

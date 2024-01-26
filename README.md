@@ -25,7 +25,7 @@ There are two modes to play this game:
 2. **Siege**
 
 ### Expedition Mode:
-  In this mode, a host creates a game, sets the total number of rounds (up to 5 max), and the bet for that game. Interested players join the game using the game code or from the explore. Players then place their bets, and the host starts the game by rolling dice. After each round, the host scores based on the dice combination table. After five rounds, the player with the highest score wins the board, and the game concludes.
+  In this mode, a host creates a game, sets the total number of rounds (up to 5 max), and the bet for that game. Interested players join the game using the game code or from the explore. Players then place their bets, and the host starts the game by rolling dice. After each round, players can raise the bet as like in poker, but the rise value cannot be more than the . After five rounds, the player with the highest score wins the board, and the game concludes.
 
 ### Siege Mode:
   This is a multilevel version of Expedition mode, consisting of three levels:
@@ -76,7 +76,8 @@ This table outlines the values assigned to different poker hands and additional 
 #### Arguments
 
 - `numOfRounds`: uint8 
-- `BetValue`: uint256
+- `minBetValue`: uint256
+- `maxRiseValue`: uint8
 - `numOfPlayers`: uint8
 
 ### 2. `Enter-Game`
