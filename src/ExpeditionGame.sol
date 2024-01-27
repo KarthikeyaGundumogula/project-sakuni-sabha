@@ -2,7 +2,6 @@
 pragma solidity ^0.8.18;
 
 import {IAssets} from "./IAssets.sol";
-import {console} from "forge-std/Test.sol";
 
 contract ExpeditionGame  {
     error ExpeditionGame_InvalidNumOfRounds(uint8 numOfRounds);
