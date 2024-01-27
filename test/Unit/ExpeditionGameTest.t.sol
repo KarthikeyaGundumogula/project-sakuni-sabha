@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import {IAssets} from "../../src/IAssets.sol";
 import {ExpeditionGame} from "../../src/ExpeditionGame.sol";
+import {DeployExpeditionGame} from "../../script/Deployments/DeployExpeditionGame.s.sol";
 import {Assets} from "../../src/Assets.sol";
 import {DeployAssets} from "../../script/Deployments/DeployAssets.s.sol";
 import {Test, console} from "forge-std/Test.sol";
@@ -22,7 +23,8 @@ contract ExpeditionGameTest is Test {
         assetContract = assetDeployer.run();
         vm.prank(PLAYER2);
         assetContract.fundVelar();
-        game = new ExpeditionGame(address(assetContract));
+        DeployExpeditionGame gameDeployer = new DeployExpeditionGame();
+        game = gameDeployer.run();
     }
 
     function testCreateExpeditionGameIncreasesCounterBy1() public {
@@ -49,8 +51,8 @@ contract ExpeditionGameTest is Test {
         vm.startPrank(PLAYER2);
         assetContract.fundVelar();
         console.log("Player 2 balance: ", assetContract.balanceOf(PLAYER2, 0));
-        assetContract.mintTokens(2,10);
-        game.joinGame(1,0,2,0);
+        assetContract.mintTokens(2, 10);
+        game.joinGame(1, 0, 2, 0);
         console.log(game.getGame(1).potValue);
         assertEq(game.getGame(1).players.length, 1);
         assertEq(game.getGame(1).players[0], PLAYER2);
