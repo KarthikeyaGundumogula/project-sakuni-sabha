@@ -16,6 +16,7 @@ contract ExpeditionGame is RrpRequesterV0 {
     error ExpeditionGame_BetIsNotMatched(uint8 tokenID);
     error ExpeditionGame_BetPlacementFailed(uint8 roundNo);
     error ExpeditionGame_RollingDiceFailed();
+    error ExpeditionGame_SavingRollFailed();
 
     enum GameState {
         CREATED,
@@ -41,11 +42,12 @@ contract ExpeditionGame is RrpRequesterV0 {
     struct PlayerStats {
         uint gameId;
         address player;
-        string currentHand;
+        uint8[] currentHand;
         uint8 currentRoll;
         uint8 currentScore;
         uint8 currentRound;
-        uint currentBet;
+        uint totalBet;
+        bool isFolded;
     }
 
     struct RollRequest {
@@ -59,6 +61,9 @@ contract ExpeditionGame is RrpRequesterV0 {
     uint8 public constant AURORA_COST = 5;
     uint8 public constant NEXOS_COST = 2;
     uint16 public constant THRESHOLD_BET = 500;
+    uint8 public constant PLUTON_ID = 1;
+    uint8 public constant AURORA_ID = 2;
+    uint8 public constant NEXOS_ID = 3;
     uint8 public constant VELAR_ID = 0;
     address public immutable VAULT_ADDRESS;
     uint private s_gameCounter;
@@ -73,6 +78,7 @@ contract ExpeditionGame is RrpRequesterV0 {
     mapping(bytes32 => mapping(address => RollRequest)) private s_rollRequests;
     mapping(bytes32 => bool) private expectingRequestWithIdToBeFulfilled;
     mapping(uint => Game) private s_games;
+    mapping(bytes32 => address) private s_requestIdToPlayer;
 
     event ExpeditionGame_GameCreated(
         uint gameID,
@@ -159,7 +165,7 @@ contract ExpeditionGame is RrpRequesterV0 {
             currentRound: 0,
             roundCompletedPlayers: 0,
             players: new address[](0),
-            roundCompleted: true,
+            roundCompleted: false,
             currentRaise: _entryBet
         });
         emit ExpeditionGame_GameCreated(
@@ -183,10 +189,21 @@ contract ExpeditionGame is RrpRequesterV0 {
         console.log("game.players.length: %d", game.players.length);
         if (game.players.length == game.numOfPlayers)
             revert ExpeditionGame_GameIsFull();
-        bool joined = placeBet(_gameId, _plutons, _auroras, _nexos);
+        bool joined = placeBet(msg.sender, _gameId, _plutons, _auroras, _nexos);
         if (!joined) revert ExpeditionGame_BetPlacementFailed(1);
         game.players.push(msg.sender);
+        game.numOfPlayers++;
         game.potValue += game.entryBet;
+        s_stats[_gameId][msg.sender] = PlayerStats({
+            gameId: _gameId,
+            player: msg.sender,
+            currentHand: new uint8[](0),
+            currentRoll: 0,
+            currentScore: 0,
+            currentRound: 0,
+            totalBet: game.entryBet,
+            isFolded: false
+        });
         emit ExpeditionGame_PlayerJoined(_gameId, msg.sender);
     }
 
@@ -201,6 +218,7 @@ contract ExpeditionGame is RrpRequesterV0 {
     }
 
     function placeBet(
+        address player,
         uint _gameId,
         uint32 _plutons,
         uint32 _auroras,
@@ -215,40 +233,34 @@ contract ExpeditionGame is RrpRequesterV0 {
             _nexos *
             NEXOS_COST;
         if (totalBet != currentBet) revert ExpeditionGame_BetIsNotMatched(0);
-        s_assets.sendTokens(VAULT_ADDRESS, _plutons, 1);
+        if (_plutons > 0)
+            s_assets.sendTokens(player, VAULT_ADDRESS, _plutons, PLUTON_ID);
+        if (_auroras > 0)
+            s_assets.sendTokens(player, VAULT_ADDRESS, _auroras, AURORA_ID);
+        if (_nexos > 0)
+            s_assets.sendTokens(player, VAULT_ADDRESS, _nexos, NEXOS_ID);
+
         return true;
     }
 
-    function rollDice(uint gameId,uint8 length) public {
+    function rollDice(uint gameId) public {
+        uint length = 5 - s_stats[gameId][msg.sender].currentHand.length;
         Game storage game = s_games[gameId];
         if (game.state != GameState.STARTED || game.state == GameState.FINISHED)
             revert ExpeditionGame_InvalidGameID(gameId);
         PlayerStats storage playerStats = s_stats[gameId][msg.sender];
-        if(playerStats.gameId != 0){
-            playerStats.gameId = gameId;
-            playerStats.player = msg.sender;
-            playerStats.currentRound = 1;
-            playerStats.currentBet = game.entryBet;
-            playerStats.currentRoll = 1;
-            playerStats.currentScore = 0;
-            playerStats.currentHand = "";  
-            s_stats[gameId][msg.sender] = playerStats;
+        if (playerStats.isFolded) revert ExpeditionGame_InvalidGameID(gameId);
+        if (playerStats.currentRoll > 3)
+            revert ExpeditionGame_RollingDiceFailed();
+        if (game.roundCompleted) revert ExpeditionGame_RollingDiceFailed();
+        if (playerStats.currentRound != game.currentRound)
+            revert ExpeditionGame_RollingDiceFailed();
+        if (game.roundCompleted = true)
+            revert ExpeditionGame_RollingDiceFailed();
+        playerStats.currentRoll++;
+        if (playerStats.currentRoll == 3) {
+            game.roundCompletedPlayers++;
         }
-        if(playerStats.currentRoll > 3)
-            revert ExpeditionGame_RollingDiceFailed();
-        if(game.roundCompleted)
-            revert ExpeditionGame_RollingDiceFailed();
-        if(playerStats.currentRound != game.currentRound)
-            revert ExpeditionGame_RollingDiceFailed();
-        if(playerStats.currentBet != game.currentRaise)
-            revert ExpeditionGame_RollingDiceFailed();
-        
-        if(game.roundCompletedPlayers == game.numOfPlayers){
-            game.currentRound++;
-            game.roundCompletedPlayers = 0;
-            game.roundCompleted = true;
-        }
-
         bytes32 rollRequestId = getRandomNumbers(length);
         s_rollRequests[rollRequestId][msg.sender] = RollRequest({
             gameId: gameId,
@@ -256,6 +268,7 @@ contract ExpeditionGame is RrpRequesterV0 {
             requestId: rollRequestId,
             rollResults: new uint[](0)
         });
+        s_requestIdToPlayer[rollRequestId] = msg.sender;
     }
 
     function getRandomNumbers(uint256 size) public returns (bytes32) {
@@ -284,9 +297,63 @@ contract ExpeditionGame is RrpRequesterV0 {
         );
         expectingRequestWithIdToBeFulfilled[requestId] = false;
         uint256[] memory qrngUint256Array = abi.decode(data, (uint256[]));
+        address player = s_requestIdToPlayer[requestId];
+        RollRequest storage rollRequest = s_rollRequests[requestId][player];
+        for (uint i = 0; i < qrngUint256Array.length; i++) {
+            rollRequest.rollResults.push(qrngUint256Array[i] % 6);
+        }
         emit ExpeditionGame_ReceivedUint256Array(requestId, qrngUint256Array);
     }
 
+    function saveRoll(
+        uint _gameId,
+        bytes32 _rollRequest,
+        uint[] memory _hand
+    ) public {
+        bool isSubsetOfRollResults = isSubset(
+            _hand,
+            s_rollRequests[_rollRequest][msg.sender].rollResults
+        );
+        if (!isSubsetOfRollResults) revert ExpeditionGame_SavingRollFailed();
+        for (uint i = 0; i < _hand.length; i++) {
+            s_stats[_gameId][msg.sender].currentHand.push(uint8(_hand[i]));
+        }
+    }
+
+    function fold(uint _gameId) public {
+        Game storage game = s_games[_gameId];
+        if (game.state != GameState.STARTED || game.state == GameState.FINISHED)
+            revert ExpeditionGame_InvalidGameID(_gameId);
+        PlayerStats storage playerStats = s_stats[_gameId][msg.sender];
+        if (playerStats.isFolded) revert ExpeditionGame_InvalidGameID(_gameId);
+        playerStats.isFolded = true;
+    }
+
+    function startRound(uint _gameId) public {
+        Game storage game = s_games[_gameId];
+
+        if (game.state != GameState.STARTED || game.state == GameState.FINISHED)
+            revert ExpeditionGame_InvalidGameID(_gameId);
+        if (game.roundCompletedPlayers != game.players.length)
+            revert ExpeditionGame_InvalidGameID(_gameId);
+        game.currentRound++;
+        game.roundCompletedPlayers = 0;
+        game.roundCompleted = false;
+    }
+
+    function endRound() public {}
+
+    function raiseBet(uint _gameId, uint32 _raiseValue) public {
+        Game storage game = s_games[_gameId];
+        if (game.state != GameState.STARTED || game.state == GameState.FINISHED)
+            revert ExpeditionGame_InvalidGameID(_gameId);
+        if (game.roundCompletedPlayers != game.players.length)
+            revert ExpeditionGame_InvalidGameID(_gameId);
+        if (!game.roundCompleted) revert ExpeditionGame_InvalidGameID(_gameId);
+        if (_raiseValue > game.maxRiseValue)
+            revert ExpeditionGame_InvalidGameID(_gameId);
+        game.currentRaise += _raiseValue;
+    }
 
     function getGame(uint _gameId) public view returns (Game memory) {
         return s_games[_gameId];
@@ -294,5 +361,24 @@ contract ExpeditionGame is RrpRequesterV0 {
 
     function getCurrentGameCounter() public view returns (uint) {
         return s_gameCounter;
+    }
+
+    function isSubset(
+        uint[] memory _array1,
+        uint[] memory _array2
+    ) public pure returns (bool) {
+        for (uint i = 0; i < _array1.length; i++) {
+            bool found = false;
+            for (uint j = 0; j < _array2.length; j++) {
+                if (_array1[i] == _array2[j]) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                return false;
+            }
+        }
+        return true;
     }
 }

@@ -76,8 +76,8 @@ contract Assets is ERC1155URIStorage, ERC1155Holder {
         _mint(msg.sender, _tokenID, _amount, "");
     }
 
-    function sendTokens(address _to, uint _amount, uint8 _tokenId) external{
-        _safeTransferFrom(msg.sender, _to, _tokenId, _amount, "");
+    function sendTokens(address _from,address _to, uint _amount, uint8 _tokenId) external{
+        _safeTransferFrom(_from, _to, _tokenId, _amount, "");
     }
 
     function getBalance(address _address, uint8 _tokenID) external view returns(uint){
