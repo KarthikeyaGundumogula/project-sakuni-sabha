@@ -14,7 +14,7 @@ contract DeployExpeditionGame is Script {
     function run() external returns (ExpeditionGame) {
         DeployAssets assetDeployer = new DeployAssets();
         Assets assets = assetDeployer.run();
-        expeditionGame = new ExpeditionGame(address(assets), AIRNODE_RRP);
+        expeditionGame = new ExpeditionGame(address(assets));
         return expeditionGame;
     }
 }

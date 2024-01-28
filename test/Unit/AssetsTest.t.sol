@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {Assets} from "../../src/Assets.sol";
-import {Test,console} from "forge-std/Test.sol";
+import {Test, console} from "forge-std/Test.sol";
 import {DeployAssets} from "../../script/Deployments/DeployAssets.s.sol";
 
 contract AssetsTest is Test {
@@ -33,7 +33,8 @@ contract AssetsTest is Test {
     uint8 public constant VELAR_FUND_AMOUNT = 100;
     Assets assets;
     address USER = address(0x1);
-    function setUp() public{
+
+    function setUp() public {
         DeployAssets deployer = new DeployAssets();
         assets = deployer.run();
     }
@@ -68,7 +69,10 @@ contract AssetsTest is Test {
         vm.startPrank(USER);
         assets.fundVelar();
         assets.mintTokens(NEXOS_ID, fundAmount);
-        assertEq(assets.balanceOf(address(assets), VELAR_ID), fundAmount * NEXOS_COST);
+        assertEq(
+            assets.balanceOf(address(assets), VELAR_ID),
+            fundAmount * NEXOS_COST
+        );
         vm.stopPrank();
     }
 
@@ -77,7 +81,10 @@ contract AssetsTest is Test {
         vm.startPrank(USER);
         assets.fundVelar();
         assets.mintTokens(NEXOS_ID, fundAmount);
-        assertEq(assets.balanceOf(USER, VELAR_ID), VELAR_FUND_AMOUNT - (fundAmount * NEXOS_COST));
+        assertEq(
+            assets.balanceOf(USER, VELAR_ID),
+            VELAR_FUND_AMOUNT - (fundAmount * NEXOS_COST)
+        );
         vm.stopPrank();
     }
 
@@ -90,11 +97,10 @@ contract AssetsTest is Test {
         vm.stopPrank();
     }
 
-    function testSendTokensToTheContract() public{
+    function testSendTokensToTheContract() public {
         vm.startPrank(USER);
         assets.fundVelar();
-        assets.sendTokens(address(assets), 10, VELAR_ID);
+        assets.sendTokens(USER, address(assets), 10, VELAR_ID);
         assertEq(assets.balanceOf(address(assets), VELAR_ID), 10);
     }
-
 }
