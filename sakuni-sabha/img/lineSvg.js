@@ -1,0 +1,2 @@
+export const lineSvg =
+  'url(\'data:image/svg+xml;utf8,<svg width="200" height="100" xmlns="http://www.w3.org/2000/svg"><line x1="0" y1="45" x2="25" y2="45" stroke="#00fb0d" stroke-width="2" /><polygon points="30,45 40,40 50,45 40,50" fill="#00fb0d" /></svg>\')';
