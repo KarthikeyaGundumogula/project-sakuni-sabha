@@ -13,34 +13,43 @@ contract AssetInteractions is Script{
         assets = assetDeployer.run();
     }
 
-    function mintPlutons() public {
-      assets.mintTokens(1,100);
+    function getPlutons(address _sender) public {
+        assets.mintTokens(_sender, 1, 100);
     }
-    function mintAuroras() public {
-      assets.mintTokens(2,100);
+
+    function getAuroras(address _sender) public {
+        assets.mintTokens(_sender, 2, 100);
     }
-    function mintNexos() public {
-      assets.mintTokens(3,100);
+
+    function getNexos(address _sender) public {
+        assets.mintTokens(_sender, 3, 100);
     }
-    function mintImperialApex() public {
-      assets.mintTokens(4,100);
+
+    function getImperialApex(address _sender) public {
+        assets.mintTokens(_sender, 4, 100);
     }
-    function mintCitadel() public {
-      assets.mintTokens(5,100);
+
+    function getCitadel(address _sender) public {
+        assets.mintTokens(_sender, 5, 100);
     }
-    function mintGrandeur() public {
-      assets.mintTokens(6,100);
+
+    function getGrandeur(address _sender) public {
+        assets.mintTokens(_sender, 6, 100);
     }
-    function mintFortress() public {
-      assets.mintTokens(7,100);
+
+    function getFortress(address _sender) public {
+        assets.mintTokens(_sender, 7, 100);
     }
-    function mintCastle() public {
-      assets.mintTokens(8,100);
+
+    function getCastle(address _sender) public {
+        assets.mintTokens(_sender, 8, 100);
     }
-    function mintStronghold() public {
-      assets.mintTokens(9,100);
+
+    function getStronghold(address _sender) public {
+        assets.mintTokens(_sender, 9, 100);
     }
-    function mintBastion() public {
-      assets.mintTokens(10,100);
+
+    function getBastion(address _sender) public {
+        assets.mintTokens(_sender, 10, 100);
     }
 }

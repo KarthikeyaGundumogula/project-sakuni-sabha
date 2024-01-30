@@ -68,12 +68,12 @@ contract Assets is ERC1155URIStorage, ERC1155Holder {
         _mint(msg.sender, VELAR_ID, 100, "");
     }
 
-    function mintTokens( uint8 _tokenID,uint _amount) external{
-        if(balanceOf(msg.sender, VELAR_ID)  < _amount * costs[_tokenID]) {
+    function mintTokens( address _to,uint8 _tokenID,uint _amount) external{
+        if(balanceOf(_to, VELAR_ID)  < _amount * costs[_tokenID]) {
             revert Assets_NotEnoughTokens(_tokenID);
         }
-        _safeTransferFrom(msg.sender, address(this), VELAR_ID, _amount * costs[_tokenID], "");
-        _mint(msg.sender, _tokenID, _amount, "");
+        _safeTransferFrom(_to, address(this), VELAR_ID, _amount * costs[_tokenID], "");
+        _mint(_to, _tokenID, _amount, "");
     }
 
     function sendTokens(address _from,address _to, uint _amount, uint8 _tokenId) external{

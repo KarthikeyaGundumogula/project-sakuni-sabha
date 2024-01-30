@@ -59,7 +59,7 @@ contract AssetsTest is Test {
         uint8 fundAmount = 20;
         vm.startPrank(USER);
         assets.fundVelar();
-        assets.mintTokens(NEXOS_ID, fundAmount);
+        assets.mintTokens(USER,NEXOS_ID, fundAmount);
         assertEq(assets.balanceOf(USER, NEXOS_ID), fundAmount);
         vm.stopPrank();
     }
@@ -68,7 +68,7 @@ contract AssetsTest is Test {
         uint8 fundAmount = 20;
         vm.startPrank(USER);
         assets.fundVelar();
-        assets.mintTokens(NEXOS_ID, fundAmount);
+        assets.mintTokens(USER,NEXOS_ID, fundAmount);
         assertEq(
             assets.balanceOf(address(assets), VELAR_ID),
             fundAmount * NEXOS_COST
@@ -80,7 +80,7 @@ contract AssetsTest is Test {
         uint8 fundAmount = 20;
         vm.startPrank(USER);
         assets.fundVelar();
-        assets.mintTokens(NEXOS_ID, fundAmount);
+        assets.mintTokens(USER,NEXOS_ID, fundAmount);
         assertEq(
             assets.balanceOf(USER, VELAR_ID),
             VELAR_FUND_AMOUNT - (fundAmount * NEXOS_COST)
@@ -93,7 +93,7 @@ contract AssetsTest is Test {
         vm.startPrank(USER);
         assets.fundVelar();
         vm.expectRevert();
-        assets.mintTokens(NEXOS_ID, fundAmount);
+        assets.mintTokens(USER,NEXOS_ID, fundAmount);
         vm.stopPrank();
     }
 

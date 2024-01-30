@@ -8,7 +8,6 @@ contract DeployAssets is Script {
     Assets assets;
 
     function run() external returns (Assets) {
-        vm.startBroadcast();
         assets = new Assets(
             "Imperial_Apex",
             "Citadel",
@@ -18,7 +17,6 @@ contract DeployAssets is Script {
             "Stronghold",
             "Bastion"
         );
-        vm.stopBroadcast();
         return assets;
     }
 }

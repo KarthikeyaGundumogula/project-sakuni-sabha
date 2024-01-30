@@ -12,7 +12,7 @@ contract ScoreCardTest is Test{
   }
 
   function testGetScore() public view{
-    uint[] memory numbers = new uint[](5);
+    uint8[] memory numbers = new uint8[](5);
     numbers[0] = 1;
     numbers[1] = 2;
     numbers[2] = 0;

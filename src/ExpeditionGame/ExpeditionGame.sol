@@ -3,10 +3,11 @@ pragma solidity ^0.8.18;
 
 import {IAssets} from "../IAssets.sol";
 import {console} from "forge-std/Test.sol";
+import "../ScoreCard.sol";
 
-// import {RrpRequesterV0} from "@api3/airnode-protocol/contracts/rrp/requesters/RrpRequesterV0.sol";
+import {RrpRequesterV0} from "@api3/airnode-protocol/contracts/rrp/requesters/RrpRequesterV0.sol";
 
-contract ExpeditionGame {
+contract ExpeditionGame is ScoreCard, RrpRequesterV0 {
     error ExpeditionGame_InvalidGameID(uint gameID);
     error ExpeditionGame_BetIsNotMatched(uint8 tokenID);
     error ExpeditionGame_BetPlacementFailed(uint8 roundNo);
@@ -24,14 +25,12 @@ contract ExpeditionGame {
         uint potValue;
         GameState state;
         uint32 entryBet;
-        uint32 maxRiseValue;
-        uint8 numOfRounds;
         uint8 numOfPlayers;
-        uint8 currentRound;
-        uint8 roundCompletedPlayers;
-        bool roundCompleted;
+        uint plutonsCount;
+        uint aurorasCount;
+        uint nexosCount;
         address[] players;
-        uint32 currentRaise;
+        uint8 vacancy;
     }
 
     struct PlayerStats {
@@ -40,9 +39,7 @@ contract ExpeditionGame {
         uint8[] currentHand;
         uint8 currentRoll;
         uint8 currentScore;
-        uint8 currentRound;
         uint totalBet;
-        bool isFolded;
     }
 
     struct RollRequest {
@@ -94,7 +91,7 @@ contract ExpeditionGame {
     );
     event ExpeditionGame_RoundCompleted(uint gameId, uint roundNo);
 
-    constructor(address _assets) {
+    constructor(address _assets, address _airnode) RrpRequesterV0(_airnode) {
         s_assets = IAssets(_assets);
         s_gameCounter = 0;
         VAULT_ADDRESS = _assets;
@@ -140,13 +137,11 @@ contract ExpeditionGame {
     function rollDice(uint gameId) public onlyAllowedAddresses(gameId) {
         uint length = 5 - s_stats[gameId][msg.sender].currentHand.length;
         Game storage game = s_games[gameId];
-        if (game.state != GameState.STARTED || game.state == GameState.FINISHED)
+        if (game.state != GameState.STARTED)
             revert ExpeditionGame_InvalidGameID(gameId);
         PlayerStats storage playerStats = s_stats[gameId][msg.sender];
         if (playerStats.currentRoll > 3)
             revert ExpeditionGame_RollingDiceFailed();
-        if (game.roundCompleted) revert ExpeditionGame_RollingDiceFailed();
-        playerStats.currentRoll++;
         bytes32 rollRequestId = getRandomNumbers(length);
         s_rollRequests[rollRequestId][msg.sender] = RollRequest({
             gameId: gameId,
@@ -158,39 +153,38 @@ contract ExpeditionGame {
     }
 
     function getRandomNumbers(uint256 size) public returns (bytes32) {
-        bytes32 requestId = bytes32("1u");
-        // bytes32 requestId = airnodeRrp.makeFullRequest(
-        //     airnode,
-        //     endpointIdUint256Array,
-        //     address(this),
-        //     sponsorWallet,
-        //     address(this),
-        //     this.getDiceResults.selector,
-        //     // Using Airnode ABI to encode the parameters
-        //     abi.encode(bytes32("1u"), bytes32("size"), size)
-        // );
+        bytes32 requestId = airnodeRrp.makeFullRequest(
+            airnode,
+            endpointIdUint256Array,
+            address(this),
+            sponsorWallet,
+            address(this),
+            this.getDiceResults.selector,
+            // Using Airnode ABI to encode the parameters
+            abi.encode(bytes32("1u"), bytes32("size"), size)
+        );
         expectingRequestWithIdToBeFulfilled[requestId] = true;
         emit ExpeditionGame_RequestedUint256Array(requestId, size);
         return requestId;
     }
 
-    // function getDiceResults(
-    //     bytes32 requestId,
-    //     bytes calldata data
-    // ) external onlyAirnodeRrp {
-    //     require(
-    //         expectingRequestWithIdToBeFulfilled[requestId],
-    //         "Request ID not known"
-    //     );
-    //     expectingRequestWithIdToBeFulfilled[requestId] = false;
-    //     uint256[] memory qrngUint256Array = abi.decode(data, (uint256[]));
-    //     address player = s_requestIdToPlayer[requestId];
-    //     RollRequest storage rollRequest = s_rollRequests[requestId][player];
-    //     for (uint i = 0; i < qrngUint256Array.length; i++) {
-    //         rollRequest.rollResults.push(qrngUint256Array[i] % 6);
-    //     }
-    //     emit ExpeditionGame_ReceivedUint256Array(requestId, qrngUint256Array);
-    // }
+    function getDiceResults(
+        bytes32 requestId,
+        bytes calldata data
+    ) external onlyAirnodeRrp {
+        require(
+            expectingRequestWithIdToBeFulfilled[requestId],
+            "Request ID not known"
+        );
+        expectingRequestWithIdToBeFulfilled[requestId] = false;
+        uint256[] memory qrngUint256Array = abi.decode(data, (uint256[]));
+        address player = s_requestIdToPlayer[requestId];
+        RollRequest storage rollRequest = s_rollRequests[requestId][player];
+        for (uint i = 0; i < qrngUint256Array.length; i++) {
+            rollRequest.rollResults.push(qrngUint256Array[i] % 6);
+        }
+        emit ExpeditionGame_ReceivedUint256Array(requestId, qrngUint256Array);
+    }
 
     function saveRoll(
         uint _gameId,
@@ -205,50 +199,51 @@ contract ExpeditionGame {
         for (uint i = 0; i < _hand.length; i++) {
             s_stats[_gameId][msg.sender].currentHand.push(uint8(_hand[i]));
         }
-        Game storage game = s_games[_gameId];
-        PlayerStats storage playerStats = s_stats[_gameId][msg.sender];
-        if (playerStats.currentRoll == 3) {
-            game.roundCompletedPlayers++;
-            if (game.roundCompletedPlayers == game.players.length) {
-                game.roundCompleted = true;
-                emit ExpeditionGame_RoundCompleted(_gameId, game.currentRound);
-            }
+        s_stats[_gameId][msg.sender].currentRoll =
+            s_stats[_gameId][msg.sender].currentRoll +
+            1;
+        if (s_stats[_gameId][msg.sender].currentRoll == 3) {
+            s_stats[_gameId][msg.sender].currentRoll = 0;
+            uint score = getScore(s_stats[_gameId][msg.sender].currentHand);
+            s_stats[_gameId][msg.sender].currentScore += uint8(score);
         }
     }
 
-    function fold(uint _gameId) public {
+    function getWinner(uint _gameId) public {
         Game storage game = s_games[_gameId];
-        if (game.state != GameState.STARTED || game.state == GameState.FINISHED)
-            revert ExpeditionGame_InvalidGameID(_gameId);
-        PlayerStats storage playerStats = s_stats[_gameId][msg.sender];
-        if (playerStats.isFolded) revert ExpeditionGame_InvalidGameID(_gameId);
-        playerStats.isFolded = true;
-    }
-
-    function startRound(uint _gameId) public {
-        Game storage game = s_games[_gameId];
-
-        if (game.state != GameState.STARTED || game.state == GameState.FINISHED)
-            revert ExpeditionGame_InvalidGameID(_gameId);
-        if (game.roundCompletedPlayers != game.players.length)
-            revert ExpeditionGame_InvalidGameID(_gameId);
-        game.currentRound++;
-        game.roundCompletedPlayers = 0;
-        game.roundCompleted = false;
-    }
-
-    function endRound() public {}
-
-    function raiseBet(uint _gameId, uint32 _raiseValue) public {
-        Game storage game = s_games[_gameId];
-        if (game.state != GameState.STARTED || game.state == GameState.FINISHED)
-            revert ExpeditionGame_InvalidGameID(_gameId);
-        if (game.roundCompletedPlayers != game.players.length)
-            revert ExpeditionGame_InvalidGameID(_gameId);
-        if (!game.roundCompleted) revert ExpeditionGame_InvalidGameID(_gameId);
-        if (_raiseValue > game.maxRiseValue)
-            revert ExpeditionGame_InvalidGameID(_gameId);
-        game.currentRaise += _raiseValue;
+        uint8 winnerScore = 0;
+        address winner;
+        for (uint i = 0; i < game.players.length; i++) {
+            if (s_stats[_gameId][game.players[i]].currentScore > winnerScore) {
+                winnerScore = s_stats[_gameId][game.players[i]].currentScore;
+                winner = game.players[i];
+            }
+        }
+        if (game.plutonsCount > 0) {
+            s_assets.sendTokens(
+                VAULT_ADDRESS,
+                winner,
+                game.plutonsCount,
+                PLUTON_ID
+            );
+        }
+        if (game.aurorasCount > 0) {
+            s_assets.sendTokens(
+                VAULT_ADDRESS,
+                winner,
+                game.aurorasCount,
+                AURORA_ID
+            );
+        }
+        if (game.nexosCount > 0) {
+            s_assets.sendTokens(
+                VAULT_ADDRESS,
+                winner,
+                game.nexosCount,
+                NEXOS_ID
+            );
+        }
+        game.state = GameState.FINISHED;
     }
 
     function getGame(uint _gameId) external view returns (Game memory) {

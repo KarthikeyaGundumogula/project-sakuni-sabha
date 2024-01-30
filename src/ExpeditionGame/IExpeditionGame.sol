@@ -8,19 +8,18 @@ interface IExpeditionGame {
         FINISHED
     }
 
+  
     struct Game {
         uint gameID;
         uint potValue;
         GameState state;
         uint32 entryBet;
-        uint32 maxRiseValue;
-        uint8 numOfRounds;
         uint8 numOfPlayers;
-        uint8 currentRound;
-        uint8 roundCompletedPlayers;
-        bool roundCompleted;
+        uint plutonsCount;
+        uint aurorasCount;
+        uint nexosCount;
         address[] players;
-        uint32 currentRaise;
+        uint8 vacancy;
     }
 
     struct PlayerStats {
@@ -29,13 +28,12 @@ interface IExpeditionGame {
         uint8[] currentHand;
         uint8 currentRoll;
         uint8 currentScore;
-        uint8 currentRound;
         uint totalBet;
-        bool isFolded;
     }
 
     function incrementGameCounter() external;
-    function getCurrentGameCounter() external view returns (uint) ;
+
+    function getCurrentGameCounter() external view returns (uint);
 
     function getGame(uint _gameId) external view returns (Game memory);
 

@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import {IExpeditionGame} from "./IExpeditionGame.sol";
 import {IAssets} from "../IAssets.sol";
+import {console} from "forge-std/console.sol";
 
 contract ExpeditionGameManager {
     error ExpeditionGame_InvalidNumOfRounds(uint8 numOfRounds);
@@ -31,7 +32,6 @@ contract ExpeditionGameManager {
     event ExpeditionGame_PlayerJoined(uint gameID, address player);
     event ExpeditionGame_GameCreated(
         uint gameID,
-        uint8 numOfRounds,
         uint8 numOfPlayers,
         uint32 minBetValue,
         uint32 maxRiseValue
@@ -40,7 +40,7 @@ contract ExpeditionGameManager {
     constructor(address _expeditionGame, address _assets) {
         s_expeditionGame = IExpeditionGame(_expeditionGame);
         s_assets = IAssets(_assets);
-        VAULT_ADDRESS = address(s_assets);
+        VAULT_ADDRESS = _assets;
     }
 
     modifier onlyAllowedAddresses(uint256 _gameId) {
@@ -85,13 +85,10 @@ contract ExpeditionGameManager {
     }
 
     function createGame(
-        uint8 _numOfRounds,
         uint8 _numOfPlayers,
         uint32 _entryBet,
         uint32 _maxRiseValue
     ) external {
-        if (_numOfRounds < 1 || _numOfRounds > 5)
-            revert ExpeditionGame_InvalidNumOfRounds(_numOfRounds);
         if (_numOfPlayers < 2 || _numOfPlayers > 5)
             revert ExpeditionGame_InvalidNumOfPlayers(_numOfPlayers);
         if (_entryBet < 3 || _entryBet > THRESHOLD_BET)
@@ -105,19 +102,16 @@ contract ExpeditionGameManager {
             potValue: 0,
             state: IExpeditionGame.GameState.CREATED,
             entryBet: _entryBet,
-            maxRiseValue: _maxRiseValue,
-            numOfRounds: _numOfRounds,
+            plutonsCount: 0,
+            aurorasCount: 0,
+            nexosCount: 0,
             numOfPlayers: _numOfPlayers,
-            currentRound: 0,
-            roundCompletedPlayers: 0,
-            players: new address[](0),
-            roundCompleted: false,
-            currentRaise: _entryBet
+            players: new address[](_numOfPlayers),
+            vacancy: _numOfPlayers
         });
         s_expeditionGame.updateGame(gameCounter, game);
         emit ExpeditionGame_GameCreated(
             s_expeditionGame.getCurrentGameCounter(),
-            _numOfRounds,
             _numOfPlayers,
             _entryBet,
             _maxRiseValue
@@ -135,20 +129,17 @@ contract ExpeditionGameManager {
             game.state != IExpeditionGame.GameState.CREATED ||
             game.state == IExpeditionGame.GameState.FINISHED
         ) revert ExpeditionGame_InvalidGameID(_gameId);
-        if (game.players.length == game.numOfPlayers)
-            revert ExpeditionGame_GameIsFull();
-        game.players[game.numOfPlayers] = msg.sender;
-        game.numOfPlayers++;
+        if (game.vacancy == 0) revert ExpeditionGame_GameIsFull();
+        game.players[game.numOfPlayers - game.vacancy] = msg.sender;
         game.potValue += game.entryBet;
+        game.vacancy--;
         IExpeditionGame.PlayerStats memory stats = IExpeditionGame.PlayerStats({
             gameId: _gameId,
             player: msg.sender,
             currentHand: new uint8[](0),
             currentRoll: 0,
             currentScore: 0,
-            currentRound: 0,
-            totalBet: 0,
-            isFolded: false
+            totalBet: 0
         });
         s_expeditionGame.updatePlayerStats(_gameId, msg.sender, stats);
         s_expeditionGame.updateGame(_gameId, game);
@@ -165,10 +156,8 @@ contract ExpeditionGameManager {
             game.state != IExpeditionGame.GameState.CREATED ||
             game.state == IExpeditionGame.GameState.FINISHED
         ) revert ExpeditionGame_InvalidGameID(_gameId);
-        if (game.numOfPlayers != game.players.length)
-            revert ExpeditionGame_GameIsNotFull();
-        game.currentRound = 1;
-        playerStats.currentRound = 1;
+        if (game.vacancy != 0) revert ExpeditionGame_GameIsNotFull();
+        game.state = IExpeditionGame.GameState.STARTED;
         s_expeditionGame.updateGame(_gameId, game);
         s_expeditionGame.updatePlayerStats(_gameId, msg.sender, playerStats);
         game.state = IExpeditionGame.GameState.STARTED;
@@ -181,26 +170,27 @@ contract ExpeditionGameManager {
         uint32 _auroras,
         uint32 _nexos
     ) public returns (bool) {
-        IExpeditionGame.Game memory currentGame = s_expeditionGame.getGame(
-            _gameId
-        );
         IExpeditionGame.PlayerStats memory playerStats = s_expeditionGame
             .getPLayerStats(_gameId, player);
-        uint currentBet = currentGame.currentRaise;
         uint totalBet = _plutons *
             PLUTON_COST +
             _auroras *
             AURORA_COST +
             _nexos *
             NEXOS_COST;
-        if (totalBet != currentBet) revert ExpeditionGame_BetIsNotMatched(0);
+        IExpeditionGame.Game memory game = s_expeditionGame.getGame(_gameId);
         if (_plutons > 0)
             s_assets.sendTokens(player, VAULT_ADDRESS, _plutons, PLUTON_ID);
+        game.plutonsCount += _plutons;
         if (_auroras > 0)
             s_assets.sendTokens(player, VAULT_ADDRESS, _auroras, AURORA_ID);
+        game.aurorasCount += _auroras;
         if (_nexos > 0)
             s_assets.sendTokens(player, VAULT_ADDRESS, _nexos, NEXOS_ID);
+        game.nexosCount += _nexos;
         playerStats.totalBet += totalBet;
+        s_expeditionGame.updatePlayerStats(_gameId, player, playerStats);
+        s_expeditionGame.updateGame(_gameId, game);
         return true;
     }
 }
