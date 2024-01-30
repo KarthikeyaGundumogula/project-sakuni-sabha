@@ -1,19 +1,13 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
-import {IAssets} from "./IAssets.sol";
+import {IAssets} from "../IAssets.sol";
 import {console} from "forge-std/Test.sol";
 
 // import {RrpRequesterV0} from "@api3/airnode-protocol/contracts/rrp/requesters/RrpRequesterV0.sol";
 
 contract ExpeditionGame {
-    error ExpeditionGame_InvalidNumOfRounds(uint8 numOfRounds);
-    error ExpeditionGame_InvalidNumOfPlayers(uint8 numOfPlayers);
-    error ExpeditionGame_InvalidMinBetValue(uint32 minBetValue);
-    error ExpeditionGame_InvalidMaxRiseValue(uint32 maxRiseValue);
     error ExpeditionGame_InvalidGameID(uint gameID);
-    error ExpeditionGame_GameIsFull();
-    error ExpeditionGame_GameIsNotFull();
     error ExpeditionGame_BetIsNotMatched(uint8 tokenID);
     error ExpeditionGame_BetPlacementFailed(uint8 roundNo);
     error ExpeditionGame_RollingDiceFailed();
@@ -81,14 +75,6 @@ contract ExpeditionGame {
     mapping(uint => Game) private s_games;
     mapping(bytes32 => address) private s_requestIdToPlayer;
 
-    event ExpeditionGame_GameCreated(
-        uint gameID,
-        uint8 numOfRounds,
-        uint8 numOfPlayers,
-        uint32 minBetValue,
-        uint32 maxRiseValue
-    );
-    event ExpeditionGame_PlayerJoined(uint gameID, address player);
     event ExpeditionGame_RequestedUint256(bytes32 indexed requestId);
     event ExpeditionGame_ReceivedUint256(
         bytes32 indexed requestId,
@@ -150,112 +136,6 @@ contract ExpeditionGame {
     //     require(msg.sender == owner, "Only owner can withdraw");
     //     airnodeRrp.requestWithdrawal(airnode, sponsorWallet);
     // }
-
-    function createGame(
-        uint8 _numOfRounds,
-        uint8 _numOfPlayers,
-        uint32 _entryBet,
-        uint32 _maxRiseValue
-    ) external {
-        if (_numOfRounds < 1 || _numOfRounds > 5)
-            revert ExpeditionGame_InvalidNumOfRounds(_numOfRounds);
-        if (_numOfPlayers < 2 || _numOfPlayers > 5)
-            revert ExpeditionGame_InvalidNumOfPlayers(_numOfPlayers);
-        if (_entryBet < 3 || _entryBet > THRESHOLD_BET)
-            revert ExpeditionGame_InvalidMinBetValue(_entryBet);
-        if (_maxRiseValue < 3 || _maxRiseValue > THRESHOLD_BET)
-            revert ExpeditionGame_InvalidMaxRiseValue(_maxRiseValue);
-        s_gameCounter++;
-        s_games[s_gameCounter] = Game({
-            gameID: s_gameCounter,
-            potValue: 0,
-            state: GameState.CREATED,
-            entryBet: _entryBet,
-            maxRiseValue: _maxRiseValue,
-            numOfRounds: _numOfRounds,
-            numOfPlayers: _numOfPlayers,
-            currentRound: 0,
-            roundCompletedPlayers: 0,
-            players: new address[](0),
-            roundCompleted: false,
-            currentRaise: _entryBet
-        });
-        emit ExpeditionGame_GameCreated(
-            s_gameCounter,
-            _numOfRounds,
-            _numOfPlayers,
-            _entryBet,
-            _maxRiseValue
-        );
-    }
-
-    function joinGame(
-        uint _gameId,
-        uint32 _plutons,
-        uint32 _auroras,
-        uint32 _nexos
-    ) public {
-        Game storage game = s_games[_gameId];
-        if (game.state != GameState.CREATED || game.state == GameState.FINISHED)
-            revert ExpeditionGame_InvalidGameID(_gameId);
-        console.log("game.players.length: %d", game.players.length);
-        if (game.players.length == game.numOfPlayers)
-            revert ExpeditionGame_GameIsFull();
-        game.players.push(msg.sender);
-        game.numOfPlayers++;
-        game.potValue += game.entryBet;
-        s_stats[_gameId][msg.sender] = PlayerStats({
-            gameId: _gameId,
-            player: msg.sender,
-            currentHand: new uint8[](0),
-            currentRoll: 0,
-            currentScore: 0,
-            currentRound: 0,
-            totalBet: 0,
-            isFolded: false
-        });
-        bool joined = placeBet(msg.sender, _gameId, _plutons, _auroras, _nexos);
-        if (!joined) revert ExpeditionGame_BetPlacementFailed(1);
-        emit ExpeditionGame_PlayerJoined(_gameId, msg.sender);
-    }
-
-    function startGame(uint _gameId) public onlyAllowedAddresses(_gameId) {
-        Game storage game = s_games[_gameId];
-        if (game.state != GameState.CREATED || game.state == GameState.FINISHED)
-            revert ExpeditionGame_InvalidGameID(_gameId);
-        if (game.numOfPlayers != game.players.length)
-            revert ExpeditionGame_GameIsNotFull();
-        game.currentRound = 1;
-        s_stats[_gameId][msg.sender].currentRound = 1;
-        game.state = GameState.STARTED;
-    }
-
-    function placeBet(
-        address player,
-        uint _gameId,
-        uint32 _plutons,
-        uint32 _auroras,
-        uint32 _nexos
-    ) public returns (bool) {
-        Game memory currentGame = s_games[_gameId];
-        PlayerStats storage playerStats = s_stats[_gameId][player];
-        uint currentBet = currentGame.currentRaise;
-        uint totalBet = _plutons *
-            PLUTON_COST +
-            _auroras *
-            AURORA_COST +
-            _nexos *
-            NEXOS_COST;
-        if (totalBet != currentBet) revert ExpeditionGame_BetIsNotMatched(0);
-        if (_plutons > 0)
-            s_assets.sendTokens(player, VAULT_ADDRESS, _plutons, PLUTON_ID);
-        if (_auroras > 0)
-            s_assets.sendTokens(player, VAULT_ADDRESS, _auroras, AURORA_ID);
-        if (_nexos > 0)
-            s_assets.sendTokens(player, VAULT_ADDRESS, _nexos, NEXOS_ID);
-        playerStats.totalBet += totalBet;
-        return true;
-    }
 
     function rollDice(uint gameId) public onlyAllowedAddresses(gameId) {
         uint length = 5 - s_stats[gameId][msg.sender].currentHand.length;
@@ -334,7 +214,6 @@ contract ExpeditionGame {
                 emit ExpeditionGame_RoundCompleted(_gameId, game.currentRound);
             }
         }
-
     }
 
     function fold(uint _gameId) public {
@@ -372,12 +251,35 @@ contract ExpeditionGame {
         game.currentRaise += _raiseValue;
     }
 
-    function getGame(uint _gameId) public view returns (Game memory) {
+    function getGame(uint _gameId) external view returns (Game memory) {
         return s_games[_gameId];
     }
 
-    function getCurrentGameCounter() public view returns (uint) {
+    function getPLayerStats(
+        uint _gameId,
+        address _player
+    ) external view returns (PlayerStats memory) {
+        return s_stats[_gameId][_player];
+    }
+
+    function updateGame(uint _gameId, Game memory _game) external {
+        s_games[_gameId] = _game;
+    }
+
+    function updatePlayerStats(
+        uint _gameId,
+        address _player,
+        PlayerStats memory _playerStats
+    ) external {
+        s_stats[_gameId][_player] = _playerStats;
+    }
+
+    function getCurrentGameCounter() external view returns (uint) {
         return s_gameCounter;
+    }
+
+    function incrementGameCounter() external {
+        s_gameCounter++;
     }
 
     function isSubset(
