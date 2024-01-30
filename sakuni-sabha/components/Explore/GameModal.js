@@ -12,9 +12,11 @@ import {
   Text,
   Flex,
 } from "@chakra-ui/react";
+import { useRouter } from "next/router";
 
 const GameModal = ({ game }) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const router = useRouter();
 
   return (
     <>
@@ -68,7 +70,15 @@ const GameModal = ({ game }) => {
             <Button colorScheme="blue" mr={3} onClick={onClose}>
               Close
             </Button>
-            <Button colorScheme={"teal"}>Join Game</Button>
+            <Button
+              colorScheme={"teal"}
+              onClick={() => {
+                router.push(`/explore/id`);
+                onClose();
+              }}
+            >
+              Join Game
+            </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
