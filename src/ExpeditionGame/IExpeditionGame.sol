@@ -8,7 +8,6 @@ interface IExpeditionGame {
         FINISHED
     }
 
-  
     struct Game {
         uint gameID;
         uint potValue;
@@ -28,6 +27,7 @@ interface IExpeditionGame {
         uint8[] currentHand;
         uint8 currentRoll;
         uint8 currentScore;
+        bytes32 currentRollRequestId;
         uint totalBet;
     }
 

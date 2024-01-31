@@ -39,6 +39,7 @@ contract ExpeditionGame is ScoreCard, RrpRequesterV0 {
         uint8[] currentHand;
         uint8 currentRoll;
         uint8 currentScore;
+        bytes32 currentRollRequestId;
         uint totalBet;
     }
 
@@ -149,6 +150,7 @@ contract ExpeditionGame is ScoreCard, RrpRequesterV0 {
             requestId: rollRequestId,
             rollResults: new uint[](0)
         });
+        s_stats[gameId][msg.sender].currentRollRequestId = rollRequestId;
         s_requestIdToPlayer[rollRequestId] = msg.sender;
     }
 
@@ -244,6 +246,13 @@ contract ExpeditionGame is ScoreCard, RrpRequesterV0 {
             );
         }
         game.state = GameState.FINISHED;
+    }
+
+    function getRollRequests(
+        address _player,
+        bytes32 _rollRequest
+    ) external view returns (RollRequest memory) {
+        return s_rollRequests[_rollRequest][_player];
     }
 
     function getGame(uint _gameId) external view returns (Game memory) {

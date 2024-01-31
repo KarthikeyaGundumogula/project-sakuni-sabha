@@ -29,13 +29,14 @@ contract ExpeditionGameManager {
     uint8 public constant VELAR_ID = 0;
     address public immutable VAULT_ADDRESS;
 
-    event ExpeditionGame_PlayerJoined(uint gameID, address player);
     event ExpeditionGame_GameCreated(
         uint gameID,
         uint8 numOfPlayers,
-        uint32 minBetValue,
-        uint32 maxRiseValue
+        uint32 minBetValue
     );
+    event ExpeditionGame_PlayerJoined(uint gameID, address player);
+    event ExpeditionGame_GameStarted(uint gameID);
+    event ExpeditionGame_BetPlaced(uint gameID, address player, uint betValue);
 
     constructor(address _expeditionGame, address _assets) {
         s_expeditionGame = IExpeditionGame(_expeditionGame);
@@ -84,17 +85,11 @@ contract ExpeditionGameManager {
         s_expeditionGame.updatePlayerStats(_gameId, _player, _playerStats);
     }
 
-    function createGame(
-        uint8 _numOfPlayers,
-        uint32 _entryBet,
-        uint32 _maxRiseValue
-    ) external {
+    function createGame(uint8 _numOfPlayers, uint32 _entryBet) external {
         if (_numOfPlayers < 2 || _numOfPlayers > 5)
             revert ExpeditionGame_InvalidNumOfPlayers(_numOfPlayers);
         if (_entryBet < 3 || _entryBet > THRESHOLD_BET)
             revert ExpeditionGame_InvalidMinBetValue(_entryBet);
-        if (_maxRiseValue < 3 || _maxRiseValue > THRESHOLD_BET)
-            revert ExpeditionGame_InvalidMaxRiseValue(_maxRiseValue);
         s_expeditionGame.incrementGameCounter();
         uint gameCounter = s_expeditionGame.getCurrentGameCounter();
         IExpeditionGame.Game memory game = IExpeditionGame.Game({
@@ -113,8 +108,7 @@ contract ExpeditionGameManager {
         emit ExpeditionGame_GameCreated(
             s_expeditionGame.getCurrentGameCounter(),
             _numOfPlayers,
-            _entryBet,
-            _maxRiseValue
+            _entryBet
         );
     }
 
@@ -139,6 +133,7 @@ contract ExpeditionGameManager {
             currentHand: new uint8[](0),
             currentRoll: 0,
             currentScore: 0,
+            currentRollRequestId: bytes32(0),
             totalBet: 0
         });
         s_expeditionGame.updatePlayerStats(_gameId, msg.sender, stats);
@@ -161,6 +156,7 @@ contract ExpeditionGameManager {
         s_expeditionGame.updateGame(_gameId, game);
         s_expeditionGame.updatePlayerStats(_gameId, msg.sender, playerStats);
         game.state = IExpeditionGame.GameState.STARTED;
+        emit ExpeditionGame_GameStarted(_gameId);
     }
 
     function placeBet(
@@ -191,6 +187,7 @@ contract ExpeditionGameManager {
         playerStats.totalBet += totalBet;
         s_expeditionGame.updatePlayerStats(_gameId, player, playerStats);
         s_expeditionGame.updateGame(_gameId, game);
+        emit ExpeditionGame_BetPlaced(_gameId, player, totalBet);
         return true;
     }
 }
