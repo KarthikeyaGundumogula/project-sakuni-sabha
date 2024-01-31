@@ -3,7 +3,6 @@ pragma solidity ^0.8.20;
 
 import {IExpeditionGame} from "./IExpeditionGame.sol";
 import {IAssets} from "../IAssets.sol";
-import {console} from "forge-std/console.sol";
 
 contract ExpeditionGameManager {
     error ExpeditionGame_InvalidNumOfRounds(uint8 numOfRounds);
@@ -55,34 +54,6 @@ contract ExpeditionGameManager {
         }
         if (!isAllowed) revert ExpeditionGame_NotAllowedAddress();
         _;
-    }
-
-    function getGame(
-        uint256 _gameId
-    ) external view returns (IExpeditionGame.Game memory) {
-        return s_expeditionGame.getGame(_gameId);
-    }
-
-    function getPLayerStats(
-        uint256 _gameId,
-        address _player
-    ) external view returns (IExpeditionGame.PlayerStats memory) {
-        return s_expeditionGame.getPLayerStats(_gameId, _player);
-    }
-
-    function updateGame(
-        uint256 _gameId,
-        IExpeditionGame.Game memory _game
-    ) external {
-        s_expeditionGame.updateGame(_gameId, _game);
-    }
-
-    function updatePlayerStats(
-        uint256 _gameId,
-        address _player,
-        IExpeditionGame.PlayerStats memory _playerStats
-    ) external {
-        s_expeditionGame.updatePlayerStats(_gameId, _player, _playerStats);
     }
 
     function createGame(uint8 _numOfPlayers, uint32 _entryBet) external {

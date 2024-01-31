@@ -73,11 +73,6 @@ contract ExpeditionGame is ScoreCard, RrpRequesterV0 {
     mapping(uint => Game) private s_games;
     mapping(bytes32 => address) private s_requestIdToPlayer;
 
-    event ExpeditionGame_RequestedUint256(bytes32 indexed requestId);
-    event ExpeditionGame_ReceivedUint256(
-        bytes32 indexed requestId,
-        uint256 response
-    );
     event ExpeditionGame_RequestedUint256Array(
         bytes32 indexed requestId,
         uint256 size

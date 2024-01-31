@@ -65,7 +65,7 @@ contract Assets is ERC1155URIStorage, ERC1155Holder {
     }
 
     function fundVelar() external {
-        _mint(msg.sender, VELAR_ID, 100, "");
+        _mint(msg.sender, VELAR_ID, 1000, "");
     }
 
     function mintTokens( address _to,uint8 _tokenID,uint _amount) external{
