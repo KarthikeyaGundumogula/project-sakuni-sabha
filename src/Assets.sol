@@ -80,6 +80,10 @@ contract Assets is ERC1155URIStorage, ERC1155Holder {
         _safeTransferFrom(_from, _to, _tokenId, _amount, "");
     }
 
+    function depositToVelars( uint totalValue) external {
+        _mint(address(this), VELAR_ID, totalValue, "");
+    }
+
     function getBalance(address _address, uint8 _tokenID) external view returns(uint){
         return balanceOf(_address, _tokenID);
     }

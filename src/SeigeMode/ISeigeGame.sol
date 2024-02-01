@@ -7,6 +7,11 @@ interface ISeigeGame {
         STARTED,
         FINISHED
     }
+    enum GameLevel {
+        BOOTCAMP,
+        MANEUVER,
+        CONQUEST
+    }
     struct Game {
         uint gameID;
         uint potValue;
@@ -15,10 +20,11 @@ interface ISeigeGame {
         uint32 maxRise;
         uint currentRise;
         uint8 numOfPlayers;
-        uint8[] potTokens; 
+        uint8[] potTokens;
         address[] players;
         uint8 vacancy;
-        uint8 currentLevel;
+        GameLevel currentLevel;
+        uint8 roundCompletedPlayers;
     }
 
     struct PlayerStats {
@@ -26,10 +32,11 @@ interface ISeigeGame {
         address player;
         uint8[] currentHand;
         uint8 currentRoll;
-        uint8 currentScore;
+        uint currentScore;
         bytes32 currentRollRequestId;
         uint totalBet;
-        uint8 currentLevel;
+        GameLevel currentLevel;
+        bool isFolded;
     }
 
     function incrementGameCounter() external;

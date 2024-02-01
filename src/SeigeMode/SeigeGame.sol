@@ -1,8 +1,9 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 import {IAssets} from "../IAssets.sol";
+import {ScoreCard} from "../ScoreCard.sol";
 
-contract SeigeGame {
+contract SeigeGame is ScoreCard {
     error SeigeGame_InvalidGameID(uint gameId);
     error SeigeGame_RollingDiceFailed();
     error SeigeGame_InvalidRollRequest();
@@ -12,7 +13,11 @@ contract SeigeGame {
         STARTED,
         FINISHED
     }
-
+    enum GameLevel {
+        BOOTCAMP,
+        MANEUVER,
+        CONQUEST
+    }
     struct Game {
         uint gameID;
         uint potValue;
@@ -24,7 +29,8 @@ contract SeigeGame {
         uint8[] potTokens;
         address[] players;
         uint8 vacancy;
-        uint8 currentLevel;
+        GameLevel currentLevel;
+        uint8 roundCompletedPlayers;
     }
 
     struct PlayerStats {
@@ -32,17 +38,18 @@ contract SeigeGame {
         address player;
         uint8[] currentHand;
         uint8 currentRoll;
-        uint8 currentScore;
+        uint currentScore;
         bytes32 currentRollRequestId;
         uint totalBet;
-        uint8 currentLevel;
+        GameLevel currentLevel;
+        bool isFolded;
     }
 
     struct RollRequest {
         uint gameId;
         address player;
         bytes32 requestId;
-        uint[] rollResults;
+        uint8[] rollResults;
     }
 
     IAssets public s_assets;
@@ -66,6 +73,12 @@ contract SeigeGame {
     event SeigeGame_WithdrawalRequested(
         address indexed airnode,
         address indexed sponsorWallet
+    );
+    event SeigeGame_RollSaved(
+        uint gameId,
+        address player,
+        uint8[] hand,
+        uint8[] newHand
     );
 
     receive() external payable {
@@ -92,6 +105,8 @@ contract SeigeGame {
         if (game.state != GameState.STARTED)
             revert SeigeGame_InvalidGameID(gameId);
         PlayerStats storage playerStats = s_playerStats[gameId][msg.sender];
+        if (playerStats.totalBet == game.currentRise)
+            revert SeigeGame_InvalidRollRequest();
         if (playerStats.currentRoll > 3) revert SeigeGame_RollingDiceFailed();
         //bytes32 rollRequestId = getRandomNumbers(length);
         bytes32 rollRequestId = bytes32("1u");
@@ -99,18 +114,98 @@ contract SeigeGame {
             gameId: gameId,
             player: msg.sender,
             requestId: rollRequestId,
-            rollResults: new uint[](0)
+            rollResults: new uint8[](0)
         });
         s_playerStats[gameId][msg.sender].currentRollRequestId = rollRequestId;
     }
 
-    function getDiceResults(uint _length) public pure returns (uint[] memory) {
-        uint[] memory arr = new uint[](_length);
-        for (uint i = 0; i < _length; i++) {
+    function getDiceResults(uint _length) public returns (uint8[] memory) {
+        uint8[] memory arr = new uint8[](_length);
+        for (uint8 i = 0; i < _length; i++) {
             arr[i] = i;
         }
-
+        s_rollRequests[bytes32("1u")][msg.sender].rollResults = arr;
         return arr;
+    }
+
+    function saveDice(
+        uint _gameId,
+        uint8[] memory _hand
+    ) public onlyAllowedAddresses(_gameId) {
+        PlayerStats memory playerStats = s_playerStats[_gameId][msg.sender];
+        Game memory game = s_games[_gameId];
+        bytes32 rollRequestId = playerStats.currentRollRequestId;
+        RollRequest memory rollRequest = s_rollRequests[rollRequestId][
+            msg.sender
+        ];
+        bool subset = isSubset(_hand, rollRequest.rollResults);
+        if (!subset) revert("Invalid combination");
+        uint currentHandLength = playerStats.currentHand.length;
+        for (uint8 i = 0; i < _hand.length; i++) {
+            playerStats.currentHand[currentHandLength + i] = _hand[i];
+        }
+        playerStats.currentRoll++;
+        if (playerStats.currentRoll == 3) {
+            playerStats.currentRollRequestId = bytes32(0);
+            game.roundCompletedPlayers++;
+            if (game.roundCompletedPlayers == game.numOfPlayers) {
+                game.roundCompletedPlayers = 0;
+                playerStats.currentRoll = 0;
+                playerStats.currentScore = getScore(playerStats.currentHand);
+                if (game.currentLevel == GameLevel.BOOTCAMP) {
+                    address winner = getCurrentLevelWinner(_gameId);
+                    s_assets.sendTokens(
+                        VAULT_ADDRESS,
+                        winner,
+                        game.potValue / 4,
+                        0
+                    );
+                    game.currentLevel = GameLevel.MANEUVER;
+                } else if (game.currentLevel == GameLevel.MANEUVER) {
+                    address winner = getCurrentLevelWinner(_gameId);
+                    s_assets.sendTokens(
+                        VAULT_ADDRESS,
+                        winner,
+                        game.potValue / 2,
+                        0
+                    );
+                    game.currentLevel = GameLevel.CONQUEST;
+                } else if (game.currentLevel == GameLevel.CONQUEST) {
+                    address winner = getCurrentLevelWinner(_gameId);
+                    s_assets.sendTokens(
+                        VAULT_ADDRESS,
+                        winner,
+                        game.potValue,
+                        0
+                    );
+                    game.state = GameState.FINISHED;
+                }
+            }
+        }
+        s_playerStats[_gameId][msg.sender] = playerStats;
+        s_games[_gameId] = game;
+        emit SeigeGame_RollSaved(
+            _gameId,
+            msg.sender,
+            _hand,
+            playerStats.currentHand
+        );
+    }
+
+    function getCurrentLevelWinner(uint _gameId) public view returns (address) {
+        Game memory game = s_games[_gameId];
+        uint maxScore = 0;
+        address winner;
+        for (uint i = 0; i < game.numOfPlayers; i++) {
+            PlayerStats memory playerStats = s_playerStats[_gameId][
+                game.players[i]
+            ];
+            if (playerStats.currentScore > maxScore) {
+                maxScore = playerStats.currentScore;
+                winner = game.players[i];
+            }
+        }
+        return winner;
     }
 
     function getRollRequests(
@@ -152,8 +247,8 @@ contract SeigeGame {
     }
 
     function isSubset(
-        uint[] memory _array1,
-        uint[] memory _array2
+        uint8[] memory _array1,
+        uint8[] memory _array2
     ) public pure returns (bool) {
         for (uint i = 0; i < _array1.length; i++) {
             bool found = false;

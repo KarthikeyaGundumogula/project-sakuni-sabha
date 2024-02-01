@@ -3,6 +3,7 @@ pragma solidity ^0.8.18;
 
 import {ISeigeGame} from "./ISeigeGame.sol";
 import {IAssets} from "../IAssets.sol";
+import {console2} from "forge-std/console2.sol";
 
 contract SeigeGameManager {
     error SeigeGame_InvalidGameID(uint gameId);
@@ -15,6 +16,9 @@ contract SeigeGameManager {
         uint32 entryBet,
         uint32 maxRise
     );
+    event SeigeGame_PlayerJoined(uint gameID, address player);
+    event SeigeGame_BetRaised(uint gameID, address player, uint totalValue);
+    event SeigeGame_PlayerFolded(uint gameID, address player);
 
     ISeigeGame public seigeGame;
     IAssets public assets;
@@ -86,7 +90,8 @@ contract SeigeGameManager {
             potTokens: new uint8[](10),
             players: new address[](numOfPlayers),
             vacancy: uint8(numOfPlayers),
-            currentLevel: 0
+            currentLevel: ISeigeGame.GameLevel.BOOTCAMP,
+            roundCompletedPlayers: 0
         });
         updateGame(gameId, game);
         emit SeigeGame_GameCreated(
@@ -103,24 +108,101 @@ contract SeigeGameManager {
             game.state != ISeigeGame.GameState.CREATED ||
             game.state == ISeigeGame.GameState.FINISHED
         ) revert SeigeGame_InvalidGameID(_gameId);
+        checkPlayersBalance(msg.sender, _potTokens);
         if (game.vacancy == 0) revert SeigeGame_GameIsFull();
         uint totalValue = getTokensValue(_potTokens);
         if (totalValue != game.entryBet) revert SeigeGame_InvalidBet();
-        game.players[game.numOfPlayers - game.vacancy] = msg.sender;
+        bool depositSuccess = depositTokens(msg.sender, _potTokens);
+        if (!depositSuccess) revert("Deposit failed");
+        ISeigeGame.PlayerStats memory playerStats = ISeigeGame.PlayerStats({
+            gameId: _gameId,
+            player: msg.sender,
+            currentHand: new uint8[](0),
+            currentRoll: 0,
+            currentScore: 0,
+            currentRollRequestId: bytes32(0),
+            totalBet: totalValue,
+            currentLevel: ISeigeGame.GameLevel.BOOTCAMP,
+            isFolded: false
+        });
+        game.vacancy--;
+        game.potValue += totalValue;
+        game.currentRise += totalValue;
+        game.players[game.numOfPlayers - game.vacancy-1] = msg.sender;
+        if (game.vacancy == 0) {
+            game.state = ISeigeGame.GameState.STARTED;
+        }
+        for (uint8 i = 0; i < _potTokens.length; i++) {
+            game.potTokens[i] += _potTokens[i];
+        }
+        updateGame(_gameId, game);
+        updatePlayerStats(_gameId, msg.sender, playerStats);
+        emit SeigeGame_PlayerJoined(_gameId, msg.sender);
     }
 
-    function placeBet(
-        address _player,
-        uint8[] memory _betTokens,
-        uint _gameId
-    ) internal returns (bool) {
+    function raiseBet(uint _gameId, uint8[] memory _potTokens) public {
         ISeigeGame.Game memory game = getGame(_gameId);
         ISeigeGame.PlayerStats memory playerStats = getPLayerStats(
             _gameId,
-            _player
+            msg.sender
         );
-        uint totalBet = getTokensValue(_betTokens);
-        updatePlayerStats(_gameId, _player, playerStats);
+        if (game.currentLevel == ISeigeGame.GameLevel.BOOTCAMP)
+            revert SeigeGame_InvalidGameID(_gameId);
+        checkPlayersBalance(msg.sender, _potTokens);
+        uint totalValue = getTokensValue(_potTokens);
+        if (totalValue > game.maxRise) revert SeigeGame_InvalidBet();
+        bool depositSuccess = depositTokens(msg.sender,  _potTokens);
+        if (!depositSuccess) revert("Deposit failed");
+        game.potValue += totalValue;
+        game.currentRise += totalValue;
+        playerStats.totalBet += totalValue;
+        updateGame(_gameId, game);
+        updatePlayerStats(_gameId, msg.sender, playerStats);
+        emit SeigeGame_BetRaised(_gameId, msg.sender, totalValue);
+    }
+
+    function foldGame(uint _gameId) public onlyAllowedAddresses(_gameId) {
+        ISeigeGame.Game memory game = getGame(_gameId);
+        ISeigeGame.PlayerStats memory playerStats = getPLayerStats(
+            _gameId,
+            msg.sender
+        );
+        if (game.state != ISeigeGame.GameState.STARTED)
+            revert SeigeGame_InvalidGameID(_gameId);
+        removePlayer(game.players, msg.sender);
+        game.numOfPlayers--;
+        playerStats.isFolded = true;
+        updateGame(_gameId, game);
+        updatePlayerStats(_gameId, msg.sender, playerStats);
+        emit SeigeGame_PlayerFolded(_gameId, msg.sender);
+    }
+
+    function startLevel(uint _gameId) public onlyAllowedAddresses(_gameId) {
+        ISeigeGame.Game memory game = getGame(_gameId);
+        if (game.currentLevel == ISeigeGame.GameLevel.BOOTCAMP)
+            revert("Game is in bootcamp level");
+        if (game.state != ISeigeGame.GameState.STARTED)
+            revert SeigeGame_InvalidGameID(_gameId);
+        bool everyoneRaisedBets = checkEveryoneRaisedBets(_gameId);
+        if (!everyoneRaisedBets) revert("Not everyone raised bets");
+        game.currentLevel = ISeigeGame.GameLevel(uint8(game.currentLevel) + 1);
+        game.roundCompletedPlayers = 0;
+        updateGame(_gameId, game);
+    }
+
+    function checkEveryoneRaisedBets(
+        uint _gameId
+    ) internal view returns (bool) {
+        ISeigeGame.Game memory game = getGame(_gameId);
+        for (uint i = 0; i < game.players.length; i++) {
+            if (game.players[i] != address(0)) {
+                ISeigeGame.PlayerStats memory playerStats = getPLayerStats(
+                    _gameId,
+                    game.players[i]
+                );
+                if (playerStats.totalBet != game.currentRise) return false;
+            }
+        }
         return true;
     }
 
@@ -132,5 +214,59 @@ contract SeigeGameManager {
             totalValue += tokenCosts[i + 1] * _potTokens[i];
         }
         return totalValue;
+    }
+
+    function depositTokens(
+        address _player,
+        uint8[] memory _betTokens
+    ) public returns (bool) {
+        for (uint8 i = 0; i < _betTokens.length; i++) {
+            if (_betTokens[i] > 0) {
+                assets.sendTokens(_player, address(assets), _betTokens[i], i + 1);
+                uint toatalValue = getTokensValue(_betTokens);
+                assets.depositToVelars(toatalValue);
+            }
+        }
+        return true;
+    }
+
+    function checkPlayersBalance(
+        address _player,
+        uint8[] memory _betTokens
+    ) public view {
+        for (uint8 i = 0; i < _betTokens.length; i++) {
+            if (assets.getBalance(_player, i + 1) < _betTokens[i])
+                revert("Insufficient balance");
+        }
+    }
+
+    function removePlayer(address[] memory arr, address addr) internal pure {
+        uint index = 0;
+        bool found = false;
+        for (uint i = 0; i < arr.length; i++) {
+            if (arr[i] == addr) {
+                index = i;
+                found = true;
+                break;
+            }
+        }
+        if (found) {
+            arr[index] = address(0);
+            arr[index] = arr[arr.length - 1];
+            arr[arr.length - 1] = address(0);
+        }
+    }
+
+    modifier onlyAllowedAddresses(uint _gameId) {
+        bool allowed = false;
+        address[] memory allowedAddresses = getGame(_gameId).players;
+        for (uint i = 0; i < allowedAddresses.length; i++) {
+            if (msg.sender == allowedAddresses[i]) {
+                allowed = true;
+                break;
+            }
+        }
+        require(allowed, "This address is not authorized to run this function");
+        _;
     }
 }
