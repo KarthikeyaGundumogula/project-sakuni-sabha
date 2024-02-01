@@ -2,6 +2,7 @@
 pragma solidity ^0.8.18;
 import {IAssets} from "../IAssets.sol";
 import {ScoreCard} from "../ScoreCard.sol";
+import {console2} from "forge-std/console2.sol";
 
 contract SeigeGame is ScoreCard {
     error SeigeGame_InvalidGameID(uint gameId);
@@ -140,10 +141,11 @@ contract SeigeGame is ScoreCard {
         ];
         bool subset = isSubset(_hand, rollRequest.rollResults);
         if (!subset) revert("Invalid combination");
-        uint currentHandLength = playerStats.currentHand.length;
+        console2.log(_hand.length);
         for (uint8 i = 0; i < _hand.length; i++) {
-            playerStats.currentHand[currentHandLength + i] = _hand[i];
+            s_playerStats[_gameId][msg.sender].currentHand.push(_hand[i]);
         }
+        playerStats.currentHand = s_playerStats[_gameId][msg.sender].currentHand;
         playerStats.currentRoll++;
         if (playerStats.currentRoll == 3) {
             playerStats.currentRollRequestId = bytes32(0);
@@ -188,7 +190,7 @@ contract SeigeGame is ScoreCard {
             _gameId,
             msg.sender,
             _hand,
-            playerStats.currentHand
+            s_playerStats[_gameId][msg.sender].currentHand
         );
     }
 
