@@ -92,7 +92,7 @@ contract Assets is ERC1155URIStorage, ERC1155Holder {
         public
         view
         virtual
-        override(ERC1155, ERC1155Holder)
+        override(ERC1155, ERC1155Receiver)
         returns (bool)
     {
         return super.supportsInterface(interfaceId);

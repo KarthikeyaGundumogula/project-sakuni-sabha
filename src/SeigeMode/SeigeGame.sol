@@ -2,9 +2,9 @@
 pragma solidity ^0.8.18;
 import {IAssets} from "../IAssets.sol";
 import {ScoreCard} from "../ScoreCard.sol";
-import {console2} from "forge-std/console2.sol";
+import {RrpRequesterV0} from "@api3/airnode-protocol/contracts/rrp/requesters/RrpRequesterV0.sol";
 
-contract SeigeGame is ScoreCard {
+contract SeigeGame is ScoreCard, RrpRequesterV0 {
     error SeigeGame_InvalidGameID(uint gameId);
     error SeigeGame_RollingDiceFailed();
     error SeigeGame_InvalidRollRequest();
@@ -37,7 +37,7 @@ contract SeigeGame is ScoreCard {
     struct PlayerStats {
         uint gameId;
         address player;
-        uint8[] currentHand;
+        uint[] currentHand;
         uint8 currentRoll;
         uint currentScore;
         bytes32 currentRollRequestId;
@@ -50,15 +50,19 @@ contract SeigeGame is ScoreCard {
         uint gameId;
         address player;
         bytes32 requestId;
-        uint8[] rollResults;
+        uint[] rollResults;
     }
 
     IAssets public s_assets;
     uint public s_gameCounter;
     address public owner;
     address public VAULT_ADDRESS;
+    address private airnode; // The address of the QRNG Airnode
+    bytes32 private endpointIdUint256; // The endpoint ID for requesting a single random number
+    bytes32 private endpointIdUint256Array; // The endpoint ID for requesting an array of random numbers
+    address private sponsorWallet; // The wallet that will cover the gas costs of the request
 
-    constructor(address _assets) {
+    constructor(address _assets, address _airnode) RrpRequesterV0(_airnode) {
         s_assets = IAssets(_assets);
         s_gameCounter = 0;
         VAULT_ADDRESS = _assets;
@@ -70,7 +74,17 @@ contract SeigeGame is ScoreCard {
     mapping(bytes32 => mapping(address => RollRequest)) public s_rollRequests;
     mapping(uint => mapping(address => uint)) public s_playerRolls;
     mapping(bytes32 => uint) public s_requestToGameId;
+    mapping(bytes32 => bool) public expectingRequestWithIdToBeFulfilled;
+    mapping(bytes32 => address) public s_requestIdToPlayer;
 
+    event ExpeditionGame_RequestedUint256Array(
+        bytes32 indexed requestId,
+        uint256 size
+    );
+    event ExpeditionGame_ReceivedUint256Array(
+        bytes32 indexed requestId,
+        uint256[] response
+    );
     event SeigeGame_WithdrawalRequested(
         address indexed airnode,
         address indexed sponsorWallet
@@ -100,8 +114,20 @@ contract SeigeGame is ScoreCard {
         _;
     }
 
+    function setRequestParameters(
+        address _airnode,
+        bytes32 _endpointIdUint256,
+        bytes32 _endpointIdUint256Array,
+        address _sponsorWallet
+    ) external {
+        airnode = _airnode;
+        endpointIdUint256 = _endpointIdUint256;
+        endpointIdUint256Array = _endpointIdUint256Array;
+        sponsorWallet = _sponsorWallet;
+    }
+
     function rollDice(uint gameId) public onlyAllowedAddresses(gameId) {
-        //uint length = 5 - s_playerStats[gameId][msg.sender].currentHand.length;
+        uint length = 5 - s_playerStats[gameId][msg.sender].currentHand.length;
         Game storage game = s_games[gameId];
         if (game.state != GameState.STARTED)
             revert SeigeGame_InvalidGameID(gameId);
@@ -109,29 +135,62 @@ contract SeigeGame is ScoreCard {
         if (playerStats.totalBet == game.currentRise)
             revert SeigeGame_InvalidRollRequest();
         if (playerStats.currentRoll > 3) revert SeigeGame_RollingDiceFailed();
-        //bytes32 rollRequestId = getRandomNumbers(length);
-        bytes32 rollRequestId = bytes32("1u");
+        bytes32 rollRequestId = getRandomNumbers(length);
         s_rollRequests[rollRequestId][msg.sender] = RollRequest({
             gameId: gameId,
             player: msg.sender,
             requestId: rollRequestId,
-            rollResults: new uint8[](0)
+            rollResults: new uint[](0)
         });
         s_playerStats[gameId][msg.sender].currentRollRequestId = rollRequestId;
     }
 
-    function getDiceResults(uint _length) public returns (uint8[] memory) {
-        uint8[] memory arr = new uint8[](_length);
-        for (uint8 i = 0; i < _length; i++) {
-            arr[i] = i;
-        }
-        s_rollRequests[bytes32("1u")][msg.sender].rollResults = arr;
-        return arr;
+    function getRandomNumbers(uint256 size) public returns (bytes32) {
+        bytes32 requestId = airnodeRrp.makeFullRequest(
+            airnode,
+            endpointIdUint256Array,
+            address(this),
+            sponsorWallet,
+            address(this),
+            this.getDiceResults.selector,
+            // Using Airnode ABI to encode the parameters
+            abi.encode(bytes32("1u"), bytes32("size"), size)
+        );
+        expectingRequestWithIdToBeFulfilled[requestId] = true;
+        emit ExpeditionGame_RequestedUint256Array(requestId, size);
+        return requestId;
     }
+
+    function getDiceResults(
+        bytes32 requestId,
+        bytes calldata data
+    ) external onlyAirnodeRrp {
+        require(
+            expectingRequestWithIdToBeFulfilled[requestId],
+            "Request ID not known"
+        );
+        expectingRequestWithIdToBeFulfilled[requestId] = false;
+        uint256[] memory qrngUint256Array = abi.decode(data, (uint256[]));
+        address player = s_requestIdToPlayer[requestId];
+        RollRequest storage rollRequest = s_rollRequests[requestId][player];
+        for (uint i = 0; i < qrngUint256Array.length; i++) {
+            rollRequest.rollResults.push(qrngUint256Array[i] % 6);
+        }
+        emit ExpeditionGame_ReceivedUint256Array(requestId, qrngUint256Array);
+    }
+
+    // function getDiceResults(uint _length) public returns (uint8[] memory) {
+    //     uint8[] memory arr = new uint8[](_length);
+    //     for (uint8 i = 0; i < _length; i++) {
+    //         arr[i] = i;
+    //     }
+    //     s_rollRequests[bytes32("1u")][msg.sender].rollResults = arr;
+    //     return arr;
+    // }
 
     function saveDice(
         uint _gameId,
-        uint8[] memory _hand
+        uint[] memory _hand
     ) public onlyAllowedAddresses(_gameId) {
         PlayerStats memory playerStats = s_playerStats[_gameId][msg.sender];
         Game memory game = s_games[_gameId];
@@ -141,11 +200,11 @@ contract SeigeGame is ScoreCard {
         ];
         bool subset = isSubset(_hand, rollRequest.rollResults);
         if (!subset) revert("Invalid combination");
-        console2.log(_hand.length);
         for (uint8 i = 0; i < _hand.length; i++) {
             s_playerStats[_gameId][msg.sender].currentHand.push(_hand[i]);
         }
-        playerStats.currentHand = s_playerStats[_gameId][msg.sender].currentHand;
+        playerStats.currentHand = s_playerStats[_gameId][msg.sender]
+            .currentHand;
         playerStats.currentRoll++;
         if (playerStats.currentRoll == 3) {
             playerStats.currentRollRequestId = bytes32(0);
@@ -210,6 +269,12 @@ contract SeigeGame is ScoreCard {
         return winner;
     }
 
+    // @notice To withdraw funds from the sponsor wallet to the contract.
+    function withdraw() external {
+        require(msg.sender == owner, "Only owner can withdraw");
+        airnodeRrp.requestWithdrawal(airnode, sponsorWallet);
+    }
+
     function getRollRequests(
         address _player,
         bytes32 _rollRequest
@@ -249,8 +314,8 @@ contract SeigeGame is ScoreCard {
     }
 
     function isSubset(
-        uint8[] memory _array1,
-        uint8[] memory _array2
+        uint[] memory _array1,
+        uint[] memory _array2
     ) public pure returns (bool) {
         for (uint i = 0; i < _array1.length; i++) {
             bool found = false;
