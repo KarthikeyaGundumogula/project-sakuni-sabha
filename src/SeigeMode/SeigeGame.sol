@@ -37,7 +37,7 @@ contract SeigeGame is ScoreCard, RrpRequesterV0 {
     struct PlayerStats {
         uint gameId;
         address player;
-        uint[] currentHand;
+        uint8[] currentHand;
         uint8 currentRoll;
         uint currentScore;
         bytes32 currentRollRequestId;
@@ -46,14 +46,7 @@ contract SeigeGame is ScoreCard, RrpRequesterV0 {
         bool isFolded;
     }
 
-    struct RollRequest {
-        uint gameId;
-        address player;
-        bytes32 requestId;
-        uint[] rollResults;
-    }
-
-    IAssets public s_assets;
+    IAssets private s_assets;
     uint public s_gameCounter;
     address public owner;
     address public VAULT_ADDRESS;
@@ -69,13 +62,12 @@ contract SeigeGame is ScoreCard, RrpRequesterV0 {
         owner = msg.sender;
     }
 
-    mapping(uint => Game) public s_games;
-    mapping(uint => mapping(address => PlayerStats)) public s_playerStats;
-    mapping(bytes32 => mapping(address => RollRequest)) public s_rollRequests;
-    mapping(uint => mapping(address => uint)) public s_playerRolls;
-    mapping(bytes32 => uint) public s_requestToGameId;
-    mapping(bytes32 => bool) public expectingRequestWithIdToBeFulfilled;
-    mapping(bytes32 => address) public s_requestIdToPlayer;
+    mapping(uint => Game) private s_games;
+    mapping(uint => mapping(address => PlayerStats)) private s_playerStats;
+    mapping(bytes32 => uint[]) private s_requestIdResults;
+    mapping(bytes32 => uint) private s_requestToGameId;
+    mapping(bytes32 => bool) private expectingRequestWithIdToBeFulfilled;
+    mapping(bytes32 => address) private s_requestIdToPlayer;
 
     event ExpeditionGame_RequestedUint256Array(
         bytes32 indexed requestId,
@@ -92,13 +84,13 @@ contract SeigeGame is ScoreCard, RrpRequesterV0 {
     event SeigeGame_RollSaved(
         uint gameId,
         address player,
-        uint8[] hand,
+        uint[] hand,
         uint8[] newHand
     );
 
     receive() external payable {
         payable(owner).transfer(msg.value);
-        // emit SeigeGame_WithdrawalRequested(airnode, sponsorWallet);
+        emit SeigeGame_WithdrawalRequested(airnode, sponsorWallet);
     }
 
     modifier onlyAllowedAddresses(uint _gameId) {
@@ -136,12 +128,6 @@ contract SeigeGame is ScoreCard, RrpRequesterV0 {
             revert SeigeGame_InvalidRollRequest();
         if (playerStats.currentRoll > 3) revert SeigeGame_RollingDiceFailed();
         bytes32 rollRequestId = getRandomNumbers(length);
-        s_rollRequests[rollRequestId][msg.sender] = RollRequest({
-            gameId: gameId,
-            player: msg.sender,
-            requestId: rollRequestId,
-            rollResults: new uint[](0)
-        });
         s_playerStats[gameId][msg.sender].currentRollRequestId = rollRequestId;
     }
 
@@ -171,22 +157,13 @@ contract SeigeGame is ScoreCard, RrpRequesterV0 {
         );
         expectingRequestWithIdToBeFulfilled[requestId] = false;
         uint256[] memory qrngUint256Array = abi.decode(data, (uint256[]));
-        address player = s_requestIdToPlayer[requestId];
-        RollRequest storage rollRequest = s_rollRequests[requestId][player];
         for (uint i = 0; i < qrngUint256Array.length; i++) {
-            rollRequest.rollResults.push(qrngUint256Array[i] % 6);
+            qrngUint256Array[i] = qrngUint256Array[i] % 6;
         }
+        s_requestIdResults[requestId] = qrngUint256Array;
         emit ExpeditionGame_ReceivedUint256Array(requestId, qrngUint256Array);
     }
 
-    // function getDiceResults(uint _length) public returns (uint8[] memory) {
-    //     uint8[] memory arr = new uint8[](_length);
-    //     for (uint8 i = 0; i < _length; i++) {
-    //         arr[i] = i;
-    //     }
-    //     s_rollRequests[bytes32("1u")][msg.sender].rollResults = arr;
-    //     return arr;
-    // }
 
     function saveDice(
         uint _gameId,
@@ -195,13 +172,13 @@ contract SeigeGame is ScoreCard, RrpRequesterV0 {
         PlayerStats memory playerStats = s_playerStats[_gameId][msg.sender];
         Game memory game = s_games[_gameId];
         bytes32 rollRequestId = playerStats.currentRollRequestId;
-        RollRequest memory rollRequest = s_rollRequests[rollRequestId][
-            msg.sender
-        ];
-        bool subset = isSubset(_hand, rollRequest.rollResults);
+        uint[] memory rollResults = s_requestIdResults[rollRequestId];
+        bool subset = isSubset(_hand, rollResults);
         if (!subset) revert("Invalid combination");
         for (uint8 i = 0; i < _hand.length; i++) {
-            s_playerStats[_gameId][msg.sender].currentHand.push(_hand[i]);
+            s_playerStats[_gameId][msg.sender].currentHand.push(
+                uint8(_hand[i])
+            );
         }
         playerStats.currentHand = s_playerStats[_gameId][msg.sender]
             .currentHand;
@@ -209,10 +186,11 @@ contract SeigeGame is ScoreCard, RrpRequesterV0 {
         if (playerStats.currentRoll == 3) {
             playerStats.currentRollRequestId = bytes32(0);
             game.roundCompletedPlayers++;
+            playerStats.currentScore = getScore(playerStats.currentHand);
+            playerStats.currentHand = new uint8[](0);
             if (game.roundCompletedPlayers == game.numOfPlayers) {
                 game.roundCompletedPlayers = 0;
                 playerStats.currentRoll = 0;
-                playerStats.currentScore = getScore(playerStats.currentHand);
                 if (game.currentLevel == GameLevel.BOOTCAMP) {
                     address winner = getCurrentLevelWinner(_gameId);
                     s_assets.sendTokens(
@@ -276,10 +254,9 @@ contract SeigeGame is ScoreCard, RrpRequesterV0 {
     }
 
     function getRollRequests(
-        address _player,
         bytes32 _rollRequest
-    ) external view returns (RollRequest memory) {
-        return s_rollRequests[_rollRequest][_player];
+    ) external view returns (uint[] memory) {
+        return s_requestIdResults[_rollRequest];
     }
 
     function getGame(uint _gameId) external view returns (Game memory) {
