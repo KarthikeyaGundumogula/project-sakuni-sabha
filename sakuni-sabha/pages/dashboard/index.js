@@ -1,38 +1,30 @@
 import React, { useEffect, useState } from "react";
+import { useMoonSDK } from "../../components/Hooks/moon";
 import { useRouter } from "next/router";
 import SignupPage from "../../components/Dashboard/signUp";
 import LoginPage from "../../components/Dashboard/login";
 
 const Dashboard = () => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState();
+  const { moon, initialize, disconnect } = useMoonSDK();
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  //capiw90370@alibrs.com
-  //
-
   useEffect(() => {
-    // Fetch user data from API
-    // fetch('/api/user')
-    //   .then(response => response.json())
-    //   .then(data => {
-    //     setUser(data);
-    //     setLoading(false);
-    //   })
-    //   .catch(error => {
-    //     console.error('Error fetching user data:', error);
-    //     setLoading(false);
-    //   });
-    setLoading(false);
-    if (user) {
-      router.push(`/dashboard/${"user"}`);
+    async function checkUser() {
+      setIsLoading(true);
+      if (moon) {
+        const accounts = await moon.listAccounts();
+        console.log("User's wallet address", accounts);
+        if (accounts.data.keys.length > 0) {
+          router.push(`/dashboard/${accounts.data.keys[0]}`);
+        } else {
+          console.log("User not logged in");
+        }
+      }
+      setIsLoading(false);
     }
+    checkUser();
   }, []);
-
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-
   return (
     <div>
       <LoginPage />

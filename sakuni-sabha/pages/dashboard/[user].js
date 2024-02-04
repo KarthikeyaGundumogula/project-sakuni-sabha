@@ -1,13 +1,13 @@
 import React from "react";
-import Header from "@/components/Header";
+import Header from "../../components/Header";
 import { Table, Thead, Tbody, Tr, Th, Text } from "@chakra-ui/react";
-import UserGamesRow from "@/components/Dashboard/UserGamesRow";
+import UserGamesRow from "../../components/Dashboard/UserGamesRow";
 import { Button } from "@chakra-ui/react";
-import GetVelars from "@/components/Dashboard/GetVelarsModal";
-import BuyAssetModal from "@/components/Dashboard/BuyAssetModal";
-import BuyTokenModal from "@/components/Dashboard/BuyTokenModal";
-import CreateGameModal from "@/components/Dashboard/CreateGameModal";
-import TokenBalances from "@/components/Dashboard/Balances";
+import GetVelars from "../../components/Dashboard/GetVelarsModal";
+import BuyAssetModal from "../../components/Dashboard/BuyAssetModal";
+import BuyTokenModal from "../../components/Dashboard/BuyTokenModal";
+import CreateGameModal from "../../components/Dashboard/CreateGameModal";
+import TokenBalances from "../../components/Dashboard/Balances";
 
 const Dashboard = () => {
   return (

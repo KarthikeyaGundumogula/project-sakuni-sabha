@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { useMoonSDK } from "../Hooks/moon";
+import { useRouter } from "next/router";
 import {
   Box,
   Button,
@@ -9,6 +10,10 @@ import {
   Heading,
   Input,
   VStack,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  Spinner,
 } from "@chakra-ui/react";
 import Header from "../Header";
 
@@ -18,8 +23,12 @@ function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [walletAddress, setWalletAddress] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   const handleLogin = async () => {
+    const router = useRouter();
+    setIsLoading(true);
     try {
       // Check if Moon SDK is properly initialized and user is authenticated
       if (!moon) {
@@ -39,6 +48,14 @@ function LoginPage() {
       // Get user's wallet address
       const accounts = await moon.listAccounts();
       console.log("User's wallet address", accounts);
+      setWalletAddress(accounts.data.keys[0]);
+      console.log("User's wallet address", accounts.data.keys[0]);
+      const bal = await moon
+        .getAccountsSDK()
+        .getBalance(walletAddress, { chainId: "1891" });
+      console.log("User's wallet balance", bal);
+      // Redirect to dashboard
+      setIsLoading(false);
     } catch (error) {
       console.error(error);
     }
@@ -47,7 +64,6 @@ function LoginPage() {
   // Use useEffect to initialize Moon SDK on component mount
   useEffect(() => {
     initialize();
-
     // Cleanup Moon SDK on component unmount
     return () => {
       disconnect();
@@ -57,11 +73,19 @@ function LoginPage() {
   return (
     <>
       <Header />
+      <Modal isOpen={isLoading} isCentered>
+        <ModalOverlay />
+        <ModalContent>
+          <Box display="flex" justifyContent="center" alignItems="center" p={4}>
+            <Spinner size="xl" />
+          </Box>
+        </ModalContent>
+      </Modal>
       <Center h="100vh">
         <Box w="md" p={8} borderWidth={1} borderRadius="lg" color={"#00fb0d"}>
           <VStack spacing={4}>
             <Heading as="h2" size="lg">
-              Create Moon Account
+              LogIn Moon Account
             </Heading>
             <FormControl id="email">
               <FormLabel>Email:</FormLabel>
