@@ -11,7 +11,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     async function checkUser() {
-      initialize();
+      await initialize();
       setIsLoading(true);
       if (moon) {
         const accounts = await moon.listAccounts();

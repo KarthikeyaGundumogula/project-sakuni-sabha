@@ -8,23 +8,29 @@ import BuyTokenModal from "../../components/Dashboard/BuyTokenModal";
 import CreateGameModal from "../../components/Dashboard/CreateGameModal";
 import TokenBalances from "../../components/Dashboard/Balances";
 import { useMoonSDK } from "../../components/Hooks/moon";
+import { ethers } from "ethers";
 
 const Dashboard = () => {
   const { moon, initialize, disconnect } = useMoonSDK();
   const [walletAddress, setWalletAddress] = useState("0x000");
+  const [balance, setBalance] = useState(0);
   useEffect(() => {
     async function getDetails() {
-      initialize();
-      const accounts = await moon.listAccounts();
-      console.log("User's wallet address", accounts.data.keys[0]);
-      setWalletAddress(accounts.data.keys[0]);
-      const bal = await moon
-        .getAccountsSDK()
-        .getBalance(accounts.data.keys[0], { chainId: "1891" });
-      console.log("User's wallet balance", bal);
+      await initialize();
     }
     getDetails();
-  });
+  }, []);
+
+  const getAddress = async () => {
+    const accounts = await moon.listAccounts();
+    console.log("User's wallet address", accounts.data.keys[0]);
+    setWalletAddress(accounts.data.keys[0]);
+    const bal = await moon
+      .getAccountsSDK()
+      .getBalance(accounts.data.keys[0], { chainId: "1891" });
+    console.log("User's wallet balance", bal.data.data.balance);
+    setBalance(ethers.formatEther(bal.data.data.balance.toString(), 9));
+  };
   return (
     <div>
       <Header />
@@ -42,10 +48,13 @@ const Dashboard = () => {
         <GetVelars />
         <CreateGameModal />
       </div>
-      <Text color={"AppWorkspace"} align={"center"}>
+      <Text color={"AppWorkspace"} align={"center"} onClick={getAddress}>
         {walletAddress}
       </Text>
-      <TokenBalances />
+      <Text color={"AppWorkspace"} align={"center"} onClick={getAddress}>
+        {balance}
+      </Text>
+      <TokenBalances walletAddress={walletAddress} />
       <Table
         variant="simple"
         width={"60%"}

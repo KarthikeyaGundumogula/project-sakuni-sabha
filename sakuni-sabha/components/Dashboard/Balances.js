@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Flex, Text } from "@chakra-ui/react";
 
-const TokenBalances = ({ contractAddress, abi, account }) => {
+const TokenBalances = () => {
   const [balances, setBalances] = useState({});
   const [tokens, setTokens] = useState([]);
 
