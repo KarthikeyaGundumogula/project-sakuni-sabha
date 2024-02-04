@@ -30,6 +30,9 @@ const GameRow = () => {
         4
       </Td>
       <Td color="AppWorkspace" textAlign={"center"}>
+        <Badge colorScheme={getStatusColor("Started")}>Seige</Badge>
+      </Td>
+      <Td color="AppWorkspace" textAlign={"center"}>
         <Badge colorScheme={getStatusColor("Started")}>Completed</Badge>
       </Td>
       <Td>

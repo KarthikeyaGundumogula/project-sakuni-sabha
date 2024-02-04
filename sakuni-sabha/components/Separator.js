@@ -2,7 +2,7 @@ import { Box, Text } from "@chakra-ui/react";
 
 const Separator = () => (
   <Box position="relative">
-    <svg width="100%" height="100" xmlns="http://www.w3.org/2000/svg">
+    <svg width="100%" height="80" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <pattern
           id="pattern"

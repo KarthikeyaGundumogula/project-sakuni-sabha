@@ -29,6 +29,9 @@ const GamesTable = () => {
                 Num-Of-Players
               </Th>
               <Th width={50} color="#00FB0D" fontSize={16} textAlign="center">
+                Mode
+              </Th>
+              <Th width={50} color="#00FB0D" fontSize={16} textAlign="center">
                 Status
               </Th>
               <Th

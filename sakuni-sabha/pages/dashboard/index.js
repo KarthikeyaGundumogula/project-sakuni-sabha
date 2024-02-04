@@ -1,10 +1,15 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
+import SignupPage from "../../components/Dashboard/signUp";
+import LoginPage from "../../components/Dashboard/login";
 
 const Dashboard = () => {
-  const [user, setUser] = useState("karthikeya");
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState();
   const router = useRouter();
+
+  //capiw90370@alibrs.com
+  //
 
   useEffect(() => {
     // Fetch user data from API
@@ -19,9 +24,8 @@ const Dashboard = () => {
     //     setLoading(false);
     //   });
     setLoading(false);
-    setUser("karthikeya");
     if (user) {
-      router.push(`/dashboard/${user}`);
+      router.push(`/dashboard/${"user"}`);
     }
   }, []);
 
@@ -29,7 +33,11 @@ const Dashboard = () => {
     return <div>Loading...</div>;
   }
 
-  return <div>Please create an account.</div>;
+  return (
+    <div>
+      <LoginPage />
+    </div>
+  );
 };
 
 export default Dashboard;
