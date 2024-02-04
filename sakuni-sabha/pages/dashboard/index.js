@@ -11,6 +11,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     async function checkUser() {
+      initialize();
       setIsLoading(true);
       if (moon) {
         const accounts = await moon.listAccounts();
@@ -22,6 +23,9 @@ const Dashboard = () => {
         }
       }
       setIsLoading(false);
+      return () => {
+        disconnect();
+      };
     }
     checkUser();
   }, []);

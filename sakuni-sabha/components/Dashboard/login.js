@@ -27,12 +27,12 @@ function LoginPage() {
   const router = useRouter();
 
   const handleLogin = async () => {
-    const router = useRouter();
     setIsLoading(true);
     try {
       // Check if Moon SDK is properly initialized and user is authenticated
       if (!moon) {
         console.error("User not authenticated");
+        setIsLoading(false);
         return;
       }
 
@@ -54,10 +54,11 @@ function LoginPage() {
         .getAccountsSDK()
         .getBalance(walletAddress, { chainId: "1891" });
       console.log("User's wallet balance", bal);
-      // Redirect to dashboard
+      router.push(`/dashboard/${accounts.data.keys[0]}`);
       setIsLoading(false);
     } catch (error) {
       console.error(error);
+      setIsLoading(false);
     }
   };
 
@@ -77,11 +78,11 @@ function LoginPage() {
         <ModalOverlay />
         <ModalContent>
           <Box display="flex" justifyContent="center" alignItems="center" p={4}>
-            <Spinner size="xl" />
+            <Spinner size="xl" color={"00fb0d"} />
           </Box>
         </ModalContent>
       </Modal>
-      <Center h="100vh">
+      <Center h="100vh" mt={"-50"}>
         <Box w="md" p={8} borderWidth={1} borderRadius="lg" color={"#00fb0d"}>
           <VStack spacing={4}>
             <Heading as="h2" size="lg">
