@@ -1,4 +1,9 @@
-import React from "react";
+import React, { useRef, useState } from "react";
+import { Contract } from "ethers";
+import { ExpeditionGameManager } from "../Helpers/Addresses";
+import { ExpeditionGameManager_ABI } from "../Helpers/ABIs";
+import { useMoonSDK } from "../Hooks/moon";
+import { useMoonEthers } from "../Hooks/ethers";
 import {
   Modal,
   ModalOverlay,
@@ -13,12 +18,59 @@ import {
   Text,
   Stack,
   useDisclosure,
+  Spinner,
+  Box,
 } from "@chakra-ui/react";
 
 const CreateGameModal = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const initialRef = React.useRef();
+  const numOfPlayers = useRef();
+  const maxRise = useRef();
+  const entryBet = useRef();
+  const initialRef = useRef();
+  const [mode, setMode] = useState("EMode");
+  const [isLoading, setIsLoading] = useState(false);
+  const { moonProvider } = useMoonEthers();
+  const { moon } = useMoonSDK();
 
+  const setModeHandler = (e) => {
+    setMode(e.target.value);
+    console.log(mode);
+  };
+
+  const createGameHandler = async () => {
+    console.log("sending tx");
+    const account = await moon.getAccountsSDK().listAccounts();
+    const contract = new Contract(
+      ExpeditionGameManager,
+      ExpeditionGameManager_ABI
+    );
+    console.log(account.data.data.keys[0]);
+    const data = contract.interface.encodeFunctionData("createGame", [
+      numOfPlayers.current.value,
+      entryBet.current.value,
+    ]);
+    const raw_tx = await moon
+      .getAccountsSDK()
+      .signTransaction(account.data.data.keys[0], {
+        to: ExpeditionGameManager,
+        data: data,
+        gasPrice: "1000000000",
+        gas: "200000",
+        nonce: "0",
+        chain_id: "1891",
+        encoding: "utf-8",
+        value: "0",
+      });
+    console.log(raw_tx.data.data.transactions[0].raw_transaction);
+    const res = await moon
+      .getAccountsSDK()
+      .broadcastTx(account.data.data.keys[0], {
+        rawTransaction: raw_tx.data.data.transactions[0].raw_transaction,
+        chainId: "1891",
+      });
+    console.log(res);
+  };
   return (
     <>
       <Button onClick={onOpen}>Create Game</Button>
@@ -32,22 +84,22 @@ const CreateGameModal = () => {
           fontFamily={"sans-serif"}
           fontWeight={"bold"}
         >
-          <ModalHeader>Buy Tokens</ModalHeader>
+          <ModalHeader>Create Game</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
             <Stack spacing={4}>
+              <Select
+                placeholder="Select Mode"
+                color="#00FB0D"
+                onChange={setModeHandler}
+              >
+                <option value="EMode">Expedition Mode</option>
+                <option value="SMode">Seige Mode</option>
+              </Select>
+              <Input ref={entryBet} placeholder="Entry Bet" color={"#00fb0d"} />
+              <Input ref={maxRise} placeholder="Max Raise" color={"#00fb0d"} />
               <Input
-                ref={initialRef}
-                placeholder="Entry Bet"
-                color={"#00fb0d"}
-              />
-              <Input
-                ref={initialRef}
-                placeholder="Max Raise"
-                color={"#00fb0d"}
-              />
-              <Input
-                ref={initialRef}
+                ref={numOfPlayers}
                 placeholder="Number of Players"
                 color={"#00fb0d"}
               />
@@ -59,8 +111,30 @@ const CreateGameModal = () => {
             <Button colorScheme="blue" mr={3} onClick={onClose}>
               Close
             </Button>
-            <Button variant="ghost">Secondary Action</Button>
+            <Button variant="ghost" onClick={createGameHandler}>
+              Create Game
+            </Button>
           </ModalFooter>
+        </ModalContent>
+      </Modal>
+      <Modal isOpen={isLoading} isCentered>
+        <ModalOverlay />
+        <ModalContent>
+          <Box
+            display="flex"
+            justifyContent="center"
+            alignItems="center"
+            p={4}
+            backgroundColor={"#081223"}
+          >
+            <Spinner
+              thickness="4px"
+              speed="0.65s"
+              emptyColor="gray.200"
+              color="#00fb0d"
+              size="xl"
+            />
+          </Box>
         </ModalContent>
       </Modal>
     </>

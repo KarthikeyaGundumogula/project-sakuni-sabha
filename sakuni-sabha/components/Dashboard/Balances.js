@@ -1,17 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { Flex, Text } from "@chakra-ui/react";
-import { ethers, Contract } from "ethers";
+import { ethers, Contract, getDefaultProvider } from "ethers";
 import { Assets_Address } from "../Helpers/Addresses";
 import { Assets_ABI } from "../Helpers/ABIs";
-import { useMoonEthers } from "../Hooks/ethers";
-import { useMoonSDK } from "../Hooks/moon";
+import { RPC_URL } from "../Helpers/Constants";
 
 const TokenBalances = (walletAddress) => {
   const [balances, setBalances] = useState({});
   const [tokens, setTokens] = useState([]);
-  const { moonProvider } = useMoonEthers();
-  const { ethereum } = window;
-  const { moon } = useMoonSDK();
   const tokenIds = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
   useEffect(() => {
@@ -30,11 +26,10 @@ const TokenBalances = (walletAddress) => {
         "Bastion",
       ];
       setTokens(tokens);
-      const assets = new Contract(Assets_Address, Assets_ABI, moonProvider);
-      console.log("walletAddress", assets);
-      console.log("walletAddress", walletAddress.walletAddress);
       const balances = {};
-
+      for (let index of tokenIds) {
+        balances[index] = 0;
+      }
       setBalances(balances);
     };
 
@@ -42,14 +37,17 @@ const TokenBalances = (walletAddress) => {
   }, []);
 
   const getBalances = async () => {
-    const assets = new Contract(Assets_Address, Assets_ABI, moonProvider);
-    console.log("walletAddress", assets);
-    console.log("walletAddress", walletAddress);
+    console.log("getting balances");
+    const provider = getDefaultProvider(RPC_URL);
+    const assets = new Contract(Assets_Address, Assets_ABI, provider);
     const balances = {};
-
+    let bal;
     for (let id of tokenIds) {
-      balances[id] = await assets.balanceOf(walletAddress, id);
+      bal = await assets.balanceOf(walletAddress.walletAddress, id);
+      balances[id] = ethers.formatUnits(bal, 18);
     }
+
+    setBalances(balances);
   };
   return (
     <Flex

@@ -1,7 +1,7 @@
 import React from "react";
 import { Tr, Td, Badge } from "@chakra-ui/react";
 
-const UserGamesRow = () => {
+const UserGamesRow = (walletAddress) => {
   function getStatusColor(status) {
     switch (status) {
       case "Win":
@@ -12,6 +12,7 @@ const UserGamesRow = () => {
         return "red";
     }
   }
+
   return (
     <Tr>
       <Td color="AppWorkspace" textAlign={"center"}>

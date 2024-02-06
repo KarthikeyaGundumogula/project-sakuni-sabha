@@ -1,6 +1,18 @@
 import React, { useEffect, useState } from "react";
 import Header from "../../components/Header";
-import { Table, Thead, Tbody, Tr, Th, Text } from "@chakra-ui/react";
+import {
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Text,
+  Modal,
+  Box,
+  ModalContent,
+  ModalOverlay,
+  Spinner,
+} from "@chakra-ui/react";
 import UserGamesRow from "../../components/Dashboard/UserGamesRow";
 import GetVelars from "../../components/Dashboard/GetVelarsModal";
 import BuyAssetModal from "../../components/Dashboard/BuyAssetModal";
@@ -8,12 +20,16 @@ import BuyTokenModal from "../../components/Dashboard/BuyTokenModal";
 import CreateGameModal from "../../components/Dashboard/CreateGameModal";
 import TokenBalances from "../../components/Dashboard/Balances";
 import { useMoonSDK } from "../../components/Hooks/moon";
-import { ethers } from "ethers";
+import { ethers, getDefaultProvider, Contract, formatEther } from "ethers";
+import { RPC_URL } from "../../components/Helpers/Constants";
+import { ExpeditionGame } from "../../components/Helpers/Addresses";
+import { ExpeditionGame_ABI } from "../../components/Helpers/ABIs";
 
 const Dashboard = () => {
   const { moon, initialize, disconnect } = useMoonSDK();
   const [walletAddress, setWalletAddress] = useState("0x000");
   const [balance, setBalance] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
   useEffect(() => {
     async function getDetails() {
       await initialize();
@@ -22,14 +38,24 @@ const Dashboard = () => {
   }, []);
 
   const getAddress = async () => {
-    const accounts = await moon.listAccounts();
-    console.log("User's wallet address", accounts.data.keys[0]);
-    setWalletAddress(accounts.data.keys[0]);
-    const bal = await moon
-      .getAccountsSDK()
-      .getBalance(accounts.data.keys[0], { chainId: "1891" });
-    console.log("User's wallet balance", bal.data.data.balance);
-    setBalance(ethers.formatEther(bal.data.data.balance.toString(), 9));
+    try {
+      setIsLoading(true);
+      const accounts = await moon.getAccountsSDK().listAccounts();
+      console.log(accounts.data.data.keys[0]);
+      setWalletAddress(accounts.data.data.keys[0]);
+      const bal = await moon
+        .getAccountsSDK()
+        .getBalance(accounts.data.data.keys[0], { chainId: "1891" });
+      setBalance(ethers.formatEther(bal.data.data.balance.toString(), 9));
+      const provider = new getDefaultProvider(RPC_URL);
+      const EGame = new Contract(ExpeditionGame, ExpeditionGame_ABI, provider);
+      const counter = await EGame.getCurrentGameCounter();
+      console.log(formatEther(counter));
+      setIsLoading(false);
+    } catch (error) {
+      setIsLoading(false);
+      console.log(error);
+    }
   };
   return (
     <div>
@@ -52,7 +78,7 @@ const Dashboard = () => {
         {walletAddress}
       </Text>
       <Text color={"AppWorkspace"} align={"center"} onClick={getAddress}>
-        {balance}
+        {"{"} {balance} {"}"}
       </Text>
       <TokenBalances walletAddress={walletAddress} />
       <Table
@@ -65,23 +91,43 @@ const Dashboard = () => {
         <Thead>
           <Tr>
             <Th color={"AppWorkspace"} textAlign={"center"}>
-              Field 1
+              Game ID
             </Th>
             <Th color={"AppWorkspace"} textAlign={"center"}>
-              Field 2
+              Pot Size
             </Th>
             <Th color={"AppWorkspace"} textAlign={"center"}>
-              Field 3
+              Score
             </Th>
             <Th color={"AppWorkspace"} textAlign={"center"}>
-              Field 4
+              Status
             </Th>
           </Tr>
         </Thead>
         <Tbody>
-          <UserGamesRow />
+          <UserGamesRow walletAddress={walletAddress.walletAddress} />
         </Tbody>
       </Table>
+      <Modal isOpen={isLoading} isCentered>
+        <ModalOverlay />
+        <ModalContent>
+          <Box
+            display="flex"
+            justifyContent="center"
+            alignItems="center"
+            p={4}
+            backgroundColor={"#081223"}
+          >
+            <Spinner
+              thickness="4px"
+              speed="0.65s"
+              emptyColor="gray.200"
+              color="#00fb0d"
+              size="xl"
+            />
+          </Box>
+        </ModalContent>
+      </Modal>
     </div>
   );
 };
