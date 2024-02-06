@@ -5,3 +5,7 @@ export const ExpeditionGameQRNGSponsor =
   "0xA818D4FA4a70a833980DE28C79529eEac32cCb01";
 export const ExpeditionGameManager =
   "0xDfaadb653D92A538cB2C5A366b9b6E66AEA890f2";
+export const SeigeGame = "0x006220B9b3E8720BfCBB6564431427e98EEF76Bd";
+export const SeigeGameQRNGSponsor =
+  "0x5c199B6A3B50Ec49D9Df60eAee15807b3E562ADf";
+export const SeigeGameManager = "0x15cc99630DbfC66B916ce75fafEBA49c7f9E8354";

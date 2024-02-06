@@ -2055,3 +2055,997 @@ export const ExpeditionGameManager_ABI = [
     type: "function",
   },
 ];
+export const SeigeGame_ABI = [
+  {
+    inputs: [
+      {
+        internalType: "bytes32",
+        name: "requestId",
+        type: "bytes32",
+      },
+      {
+        internalType: "bytes",
+        name: "data",
+        type: "bytes",
+      },
+    ],
+    name: "getDiceResults",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "size",
+        type: "uint256",
+      },
+    ],
+    name: "getRandomNumbers",
+    outputs: [
+      {
+        internalType: "bytes32",
+        name: "",
+        type: "bytes32",
+      },
+    ],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "incrementGameCounter",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "gameId",
+        type: "uint256",
+      },
+    ],
+    name: "rollDice",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "_gameId",
+        type: "uint256",
+      },
+      {
+        internalType: "uint256[]",
+        name: "_hand",
+        type: "uint256[]",
+      },
+    ],
+    name: "saveDice",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "_assets",
+        type: "address",
+      },
+      {
+        internalType: "address",
+        name: "_airnode",
+        type: "address",
+      },
+    ],
+    stateMutability: "nonpayable",
+    type: "constructor",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "gameId",
+        type: "uint256",
+      },
+    ],
+    name: "SeigeGame_InvalidGameID",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "SeigeGame_InvalidRollRequest",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "SeigeGame_RollingDiceFailed",
+    type: "error",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "bytes32",
+        name: "requestId",
+        type: "bytes32",
+      },
+      {
+        indexed: false,
+        internalType: "uint256[]",
+        name: "response",
+        type: "uint256[]",
+      },
+    ],
+    name: "ExpeditionGame_ReceivedUint256Array",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "bytes32",
+        name: "requestId",
+        type: "bytes32",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "size",
+        type: "uint256",
+      },
+    ],
+    name: "ExpeditionGame_RequestedUint256Array",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "gameId",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "address",
+        name: "player",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "uint256[]",
+        name: "hand",
+        type: "uint256[]",
+      },
+      {
+        indexed: false,
+        internalType: "uint8[]",
+        name: "newHand",
+        type: "uint8[]",
+      },
+    ],
+    name: "SeigeGame_RollSaved",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "address",
+        name: "airnode",
+        type: "address",
+      },
+      {
+        indexed: true,
+        internalType: "address",
+        name: "sponsorWallet",
+        type: "address",
+      },
+    ],
+    name: "SeigeGame_WithdrawalRequested",
+    type: "event",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "_airnode",
+        type: "address",
+      },
+      {
+        internalType: "bytes32",
+        name: "_endpointIdUint256",
+        type: "bytes32",
+      },
+      {
+        internalType: "bytes32",
+        name: "_endpointIdUint256Array",
+        type: "bytes32",
+      },
+      {
+        internalType: "address",
+        name: "_sponsorWallet",
+        type: "address",
+      },
+    ],
+    name: "setRequestParameters",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "_gameId",
+        type: "uint256",
+      },
+      {
+        components: [
+          {
+            internalType: "uint256",
+            name: "gameID",
+            type: "uint256",
+          },
+          {
+            internalType: "uint256",
+            name: "potValue",
+            type: "uint256",
+          },
+          {
+            internalType: "enum SeigeGame.GameState",
+            name: "state",
+            type: "uint8",
+          },
+          {
+            internalType: "uint32",
+            name: "entryBet",
+            type: "uint32",
+          },
+          {
+            internalType: "uint32",
+            name: "maxRise",
+            type: "uint32",
+          },
+          {
+            internalType: "uint256",
+            name: "currentRise",
+            type: "uint256",
+          },
+          {
+            internalType: "uint8",
+            name: "numOfPlayers",
+            type: "uint8",
+          },
+          {
+            internalType: "uint8[]",
+            name: "potTokens",
+            type: "uint8[]",
+          },
+          {
+            internalType: "address[]",
+            name: "players",
+            type: "address[]",
+          },
+          {
+            internalType: "uint8",
+            name: "vacancy",
+            type: "uint8",
+          },
+          {
+            internalType: "enum SeigeGame.GameLevel",
+            name: "currentLevel",
+            type: "uint8",
+          },
+          {
+            internalType: "uint8",
+            name: "roundCompletedPlayers",
+            type: "uint8",
+          },
+        ],
+        internalType: "struct SeigeGame.Game",
+        name: "_game",
+        type: "tuple",
+      },
+    ],
+    name: "updateGame",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "_gameId",
+        type: "uint256",
+      },
+      {
+        internalType: "address",
+        name: "_player",
+        type: "address",
+      },
+      {
+        components: [
+          {
+            internalType: "uint256",
+            name: "gameId",
+            type: "uint256",
+          },
+          {
+            internalType: "address",
+            name: "player",
+            type: "address",
+          },
+          {
+            internalType: "uint8[]",
+            name: "currentHand",
+            type: "uint8[]",
+          },
+          {
+            internalType: "uint8",
+            name: "currentRoll",
+            type: "uint8",
+          },
+          {
+            internalType: "uint256",
+            name: "currentScore",
+            type: "uint256",
+          },
+          {
+            internalType: "bytes32",
+            name: "currentRollRequestId",
+            type: "bytes32",
+          },
+          {
+            internalType: "uint256",
+            name: "totalBet",
+            type: "uint256",
+          },
+          {
+            internalType: "enum SeigeGame.GameLevel",
+            name: "currentLevel",
+            type: "uint8",
+          },
+          {
+            internalType: "bool",
+            name: "isFolded",
+            type: "bool",
+          },
+        ],
+        internalType: "struct SeigeGame.PlayerStats",
+        name: "_playerStats",
+        type: "tuple",
+      },
+    ],
+    name: "updatePlayerStats",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "withdraw",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    stateMutability: "payable",
+    type: "receive",
+  },
+  {
+    inputs: [],
+    name: "airnodeRrp",
+    outputs: [
+      {
+        internalType: "contract IAirnodeRrpV0",
+        name: "",
+        type: "address",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "getCurrentGameCounter",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "_gameId",
+        type: "uint256",
+      },
+    ],
+    name: "getCurrentLevelWinner",
+    outputs: [
+      {
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "_gameId",
+        type: "uint256",
+      },
+    ],
+    name: "getGame",
+    outputs: [
+      {
+        components: [
+          {
+            internalType: "uint256",
+            name: "gameID",
+            type: "uint256",
+          },
+          {
+            internalType: "uint256",
+            name: "potValue",
+            type: "uint256",
+          },
+          {
+            internalType: "enum SeigeGame.GameState",
+            name: "state",
+            type: "uint8",
+          },
+          {
+            internalType: "uint32",
+            name: "entryBet",
+            type: "uint32",
+          },
+          {
+            internalType: "uint32",
+            name: "maxRise",
+            type: "uint32",
+          },
+          {
+            internalType: "uint256",
+            name: "currentRise",
+            type: "uint256",
+          },
+          {
+            internalType: "uint8",
+            name: "numOfPlayers",
+            type: "uint8",
+          },
+          {
+            internalType: "uint8[]",
+            name: "potTokens",
+            type: "uint8[]",
+          },
+          {
+            internalType: "address[]",
+            name: "players",
+            type: "address[]",
+          },
+          {
+            internalType: "uint8",
+            name: "vacancy",
+            type: "uint8",
+          },
+          {
+            internalType: "enum SeigeGame.GameLevel",
+            name: "currentLevel",
+            type: "uint8",
+          },
+          {
+            internalType: "uint8",
+            name: "roundCompletedPlayers",
+            type: "uint8",
+          },
+        ],
+        internalType: "struct SeigeGame.Game",
+        name: "",
+        type: "tuple",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "_gameId",
+        type: "uint256",
+      },
+      {
+        internalType: "address",
+        name: "_player",
+        type: "address",
+      },
+    ],
+    name: "getPLayerStats",
+    outputs: [
+      {
+        components: [
+          {
+            internalType: "uint256",
+            name: "gameId",
+            type: "uint256",
+          },
+          {
+            internalType: "address",
+            name: "player",
+            type: "address",
+          },
+          {
+            internalType: "uint8[]",
+            name: "currentHand",
+            type: "uint8[]",
+          },
+          {
+            internalType: "uint8",
+            name: "currentRoll",
+            type: "uint8",
+          },
+          {
+            internalType: "uint256",
+            name: "currentScore",
+            type: "uint256",
+          },
+          {
+            internalType: "bytes32",
+            name: "currentRollRequestId",
+            type: "bytes32",
+          },
+          {
+            internalType: "uint256",
+            name: "totalBet",
+            type: "uint256",
+          },
+          {
+            internalType: "enum SeigeGame.GameLevel",
+            name: "currentLevel",
+            type: "uint8",
+          },
+          {
+            internalType: "bool",
+            name: "isFolded",
+            type: "bool",
+          },
+        ],
+        internalType: "struct SeigeGame.PlayerStats",
+        name: "",
+        type: "tuple",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "bytes32",
+        name: "_rollRequest",
+        type: "bytes32",
+      },
+    ],
+    name: "getRollRequests",
+    outputs: [
+      {
+        internalType: "uint256[]",
+        name: "",
+        type: "uint256[]",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint8[]",
+        name: "numbers",
+        type: "uint8[]",
+      },
+    ],
+    name: "getScore",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256[]",
+        name: "_array1",
+        type: "uint256[]",
+      },
+      {
+        internalType: "uint256[]",
+        name: "_array2",
+        type: "uint256[]",
+      },
+    ],
+    name: "isSubset",
+    outputs: [
+      {
+        internalType: "bool",
+        name: "",
+        type: "bool",
+      },
+    ],
+    stateMutability: "pure",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "owner",
+    outputs: [
+      {
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "s_gameCounter",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "enum ScoreCard.Combination",
+        name: "",
+        type: "uint8",
+      },
+    ],
+    name: "scores",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "VAULT_ADDRESS",
+    outputs: [
+      {
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+];
+export const SeigeGameManager_ABI = [
+  {
+    inputs: [
+      {
+        internalType: "uint32",
+        name: "numOfPlayers",
+        type: "uint32",
+      },
+      {
+        internalType: "uint32",
+        name: "entryBet",
+        type: "uint32",
+      },
+      {
+        internalType: "uint32",
+        name: "maxRise",
+        type: "uint32",
+      },
+    ],
+    name: "createGame",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "_player",
+        type: "address",
+      },
+      {
+        internalType: "uint8[]",
+        name: "_betTokens",
+        type: "uint8[]",
+      },
+    ],
+    name: "depositTokens",
+    outputs: [
+      {
+        internalType: "bool",
+        name: "",
+        type: "bool",
+      },
+    ],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "_gameId",
+        type: "uint256",
+      },
+    ],
+    name: "foldGame",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "_gameId",
+        type: "uint256",
+      },
+      {
+        internalType: "uint8[]",
+        name: "_potTokens",
+        type: "uint8[]",
+      },
+    ],
+    name: "joinGame",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "_gameId",
+        type: "uint256",
+      },
+      {
+        internalType: "uint8[]",
+        name: "_potTokens",
+        type: "uint8[]",
+      },
+    ],
+    name: "raiseBet",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "_seigeGameAddress",
+        type: "address",
+      },
+      {
+        internalType: "address",
+        name: "_assets",
+        type: "address",
+      },
+    ],
+    stateMutability: "nonpayable",
+    type: "constructor",
+  },
+  {
+    inputs: [],
+    name: "SeigeGame_GameIsFull",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "SeigeGame_InvalidBet",
+    type: "error",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "gameId",
+        type: "uint256",
+      },
+    ],
+    name: "SeigeGame_InvalidGameID",
+    type: "error",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "gameID",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "address",
+        name: "player",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "totalValue",
+        type: "uint256",
+      },
+    ],
+    name: "SeigeGame_BetRaised",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "gameID",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "uint8",
+        name: "numOfPlayers",
+        type: "uint8",
+      },
+      {
+        indexed: false,
+        internalType: "uint32",
+        name: "entryBet",
+        type: "uint32",
+      },
+      {
+        indexed: false,
+        internalType: "uint32",
+        name: "maxRise",
+        type: "uint32",
+      },
+    ],
+    name: "SeigeGame_GameCreated",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "gameID",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "address",
+        name: "player",
+        type: "address",
+      },
+    ],
+    name: "SeigeGame_PlayerFolded",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "gameID",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "address",
+        name: "player",
+        type: "address",
+      },
+    ],
+    name: "SeigeGame_PlayerJoined",
+    type: "event",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "_gameId",
+        type: "uint256",
+      },
+    ],
+    name: "startLevel",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "assets",
+    outputs: [
+      {
+        internalType: "contract IAssets",
+        name: "",
+        type: "address",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "_player",
+        type: "address",
+      },
+      {
+        internalType: "uint8[]",
+        name: "_betTokens",
+        type: "uint8[]",
+      },
+    ],
+    name: "checkPlayersBalance",
+    outputs: [],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "seigeGame",
+    outputs: [
+      {
+        internalType: "contract ISeigeGame",
+        name: "",
+        type: "address",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+];
