@@ -3,7 +3,6 @@ import { Contract } from "ethers";
 import { ExpeditionGameManager } from "../Helpers/Addresses";
 import { ExpeditionGameManager_ABI } from "../Helpers/ABIs";
 import { useMoonSDK } from "../Hooks/moon";
-import { useMoonEthers } from "../Hooks/ethers";
 import {
   Modal,
   ModalOverlay,
@@ -30,7 +29,6 @@ const CreateGameModal = () => {
   const initialRef = useRef();
   const [mode, setMode] = useState("EMode");
   const [isLoading, setIsLoading] = useState(false);
-  const { moonProvider } = useMoonEthers();
   const { moon } = useMoonSDK();
 
   const setModeHandler = (e) => {
@@ -39,13 +37,13 @@ const CreateGameModal = () => {
   };
 
   const createGameHandler = async () => {
+    setIsLoading(true);
     console.log("sending tx");
     const account = await moon.getAccountsSDK().listAccounts();
     const contract = new Contract(
       ExpeditionGameManager,
       ExpeditionGameManager_ABI
     );
-    console.log(account.data.data.keys[0]);
     const data = contract.interface.encodeFunctionData("createGame", [
       numOfPlayers.current.value,
       entryBet.current.value,
@@ -62,14 +60,13 @@ const CreateGameModal = () => {
         encoding: "utf-8",
         value: "0",
       });
-    console.log(raw_tx.data.data.transactions[0].raw_transaction);
     const res = await moon
       .getAccountsSDK()
       .broadcastTx(account.data.data.keys[0], {
         rawTransaction: raw_tx.data.data.transactions[0].raw_transaction,
         chainId: "1891",
       });
-    console.log(res);
+    setIsLoading(false);
   };
   return (
     <>

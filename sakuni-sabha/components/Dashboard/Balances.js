@@ -42,9 +42,10 @@ const TokenBalances = (walletAddress) => {
     const assets = new Contract(Assets_Address, Assets_ABI, provider);
     const balances = {};
     let bal;
+    const addr = walletAddress.walletAddress;
     for (let id of tokenIds) {
-      bal = await assets.balanceOf(walletAddress.walletAddress, id);
-      balances[id] = ethers.formatUnits(bal, 18);
+      bal = await assets.balanceOf(addr, id);
+      balances[id] = bal.toString();
     }
 
     setBalances(balances);
