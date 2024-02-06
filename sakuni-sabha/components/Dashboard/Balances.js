@@ -43,6 +43,7 @@ const TokenBalances = (walletAddress) => {
     const balances = {};
     let bal;
     const addr = walletAddress.walletAddress;
+    console.log(addr);
     for (let id of tokenIds) {
       bal = await assets.balanceOf(addr, id);
       balances[id] = bal.toString();

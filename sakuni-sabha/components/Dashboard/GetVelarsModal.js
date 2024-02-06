@@ -16,14 +16,16 @@ import {
 } from "@chakra-ui/react";
 import { Assets_Address } from "../Helpers/Addresses";
 import { Assets_ABI } from "../Helpers/ABIs";
-import { Contract } from "ethers";
+import { Contract, getDefaultProvider } from "ethers";
 import { useMoonSDK } from "../Hooks/moon";
+import { RPC_URL } from "../Helpers/Constants";
 
 const GetVelarsModal = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const initialRef = React.useRef();
   const { moon } = useMoonSDK();
   const [isLoading, setIsLoading] = useState(false);
+  const [velars, setVelars] = useState("1000");
 
   const getVelarsHandler = async () => {
     setIsLoading(true);
@@ -52,6 +54,12 @@ const GetVelarsModal = () => {
         chainId: "1891",
       });
     console.log(res);
+    const provider = getDefaultProvider(RPC_URL);
+    let contract1 = new Contract(Assets_Address, Assets_ABI, provider);
+    console.log(account.data.data.keys[0]);
+    const bal = await contract1.balanceOf(account.data.data.keys[0], 0);
+    console.log(bal);
+    setVelars(bal.toString());
     setIsLoading(false);
   };
   return (
@@ -70,7 +78,7 @@ const GetVelarsModal = () => {
           <ModalCloseButton />
           <ModalBody>
             <Stack spacing={4}>
-              <Text>Velars: 100</Text>{" "}
+              <Text>Velars: {velars}</Text>{" "}
               {/* Replace 100 with the actual balance */}
             </Stack>
           </ModalBody>

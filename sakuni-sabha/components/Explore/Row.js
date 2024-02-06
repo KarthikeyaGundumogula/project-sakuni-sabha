@@ -1,8 +1,32 @@
-import React from "react";
-import { Tr, Td, Badge } from "@chakra-ui/react";
+import React, { useEffect, useState } from "react";
+import { Tr, Td, Badge, Spinner } from "@chakra-ui/react";
 import GameModal from "./GameModal";
 
-const GameRow = () => {
+const GameRow = ({ game, mode }) => {
+  const [gameId, setGameId] = useState(0);
+  const [entryFee, setEntryFee] = useState(0);
+  const [maxRaise, setMaxRaise] = useState(0);
+  const [players, setPlayers] = useState(0);
+  const [vacancy, setVacancy] = useState(0);
+  const [status, setStatus] = useState("Created");
+  const [type, setType] = useState("Expedition");
+  useEffect(() => {
+    setGameId(game[0].toString());
+    setEntryFee(game[3].toString());
+    if (game[2] == 0) {
+      setStatus("Created");
+    } else if (game[2] == 1) {
+      setStatus("Started");
+    } else {
+      setStatus("Completed");
+    }
+    setPlayers(game[4].toString());
+    setType(mode);
+    setVacancy(game[9].toString());
+    if (mode === "Expedition") {
+      setMaxRaise("----");
+    }
+  }, [game]);
   function getStatusColor(status) {
     switch (status) {
       case "Completed":
@@ -18,25 +42,28 @@ const GameRow = () => {
   return (
     <Tr>
       <Td color="AppWorkspace" textAlign={"center"}>
-        1
+        {gameId}
       </Td>
       <Td color="AppWorkspace" textAlign={"center"}>
-        20
+        {entryFee}
       </Td>
       <Td color="AppWorkspace" textAlign={"center"}>
-        30
+        {maxRaise}
       </Td>
       <Td color="AppWorkspace" textAlign={"center"}>
-        4
+        {players}
       </Td>
       <Td color="AppWorkspace" textAlign={"center"}>
-        <Badge colorScheme={getStatusColor("Started")}>Seige</Badge>
+        {vacancy}
       </Td>
       <Td color="AppWorkspace" textAlign={"center"}>
-        <Badge colorScheme={getStatusColor("Started")}>Completed</Badge>
+        <Badge colorScheme={getStatusColor("Started")}>{type}</Badge>
+      </Td>
+      <Td color="AppWorkspace" textAlign={"center"}>
+        <Badge colorScheme={getStatusColor("Started")}>{status}</Badge>
       </Td>
       <Td>
-        <GameModal />
+        <GameModal game={game} />
       </Td>
     </Tr>
   );
